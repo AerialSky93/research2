@@ -43,6 +43,8 @@ tradeBull  = input.bool     (true      , 'Long on bullish SFP confirm'    , grou
 useStop    = input.bool     (true      , 'Stop at swing level'            , group=      'Strategy'    )
 profitPoints = input.float   (1.0       , 'Take-profit (points from entry)', minval=0.01, step=0.01, group='Strategy',
  tooltip = 'Long: limit at entry + points. Short: limit at entry − points. Minimum 0.01. Stops use the SFP swing level when “Stop at swing level” is on.')
+eodFlattenEt = input.bool    (true      , 'Flatten at 3:30 PM ET'          , group=      'Strategy'    ,
+ tooltip = 'Once per day, closes all strategy positions during 3:30 PM–4:00 PM America/New_York (handles EST/EDT). Use an intraday chart so bars exist in that window.')
 
 //-----------------------------------------------------------------------------}      
 // Strategy order flags (set during pattern logic; entries at end of script)
@@ -343,5 +345,16 @@ if isShortOrEntryBar
         strategy.exit('SFP Short SL', 'SFP Short', stop = shortSwingStopPersist, limit = shortTakeProfitPrice)
     else
         strategy.exit('SFP Short SL', 'SFP Short', limit = shortTakeProfitPrice)
+
+timezoneEt = 'America/New_York'
+nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
+inEodFlattenWindow = nyMinutes >= 15 * 60 + 30 and nyMinutes < 16 * 60
+dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
+
+var int eodFlattenedDayKey = na
+if eodFlattenEt and inEodFlattenWindow and strategy.position_size != 0
+    if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
+        strategy.close_all(comment = 'EOD 3:30 PM ET')
+        eodFlattenedDayKey := dayKeyEt
 
 //---------------------------------------------------------------------------------------------------------------------}
