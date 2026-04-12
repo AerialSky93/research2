@@ -1,7 +1,8 @@
 //@version=5
 strategy('Wick swing pivots (3-bar)', 'WickSwingPivots', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100,
-     commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0)
+     commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0,
+     process_orders_on_close = true)
 
 var float lastSwingHigh = na
 var float lastSwingLow = na
@@ -43,3 +44,9 @@ if bullSfp
 
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'Sf')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'Sf')
+
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0).
+if bullSfp
+    strategy.entry('SFP', strategy.long, comment = 'Bull SFP')
+else if bearSfp
+    strategy.entry('SFP', strategy.short, comment = 'Bear SFP')
