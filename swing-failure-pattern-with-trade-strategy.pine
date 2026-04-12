@@ -2,7 +2,7 @@
 // © LuxAlgo
 
 //@version=5
-strategy('Swing Failure Pattern [LuxAlgo]', 'LuxAlgo - Swing Failure Pattern', overlay = true, max_labels_count = 500, max_lines_count = 500, max_boxes_count = 500
+strategy('Swing Failure Pattern Test [LuxAlgo]', 'LuxAlgo - Swing Failure Pattern Test', overlay = true, max_labels_count = 500, max_lines_count = 500, max_boxes_count = 500
   , initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10, commission_type = strategy.commission.percent, commission_value = 0.1
   , pyramiding = 0, process_orders_on_close = true)
 //---------------------------------------------------------------------------------------------------------------------}
