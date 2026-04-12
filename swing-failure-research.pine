@@ -1,6 +1,6 @@
 //@version=5
 strategy('Wick swing pivots (3-bar)', 'WickSwingPivots', overlay = true,
-     initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100,
+     initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
      commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0,
      process_orders_on_close = true)
 
