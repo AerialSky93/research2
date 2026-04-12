@@ -45,8 +45,23 @@ if bullSfp
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'Sf')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'Sf')
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0).
-if bullSfp
+
+flatten330Et = input.bool(true, 'Flatten at 3:30 PM ET', tooltip = 'Closes all positions once per session day during 3:30–4:00 PM America/New_York. Use an intraday chart so bars exist in that window.')
+
+timezoneEt = 'America/New_York'
+nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
+inEodFlattenWindow = nyMinutes >= 15 * 60 + 30 and nyMinutes < 16 * 60
+dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
+
+var int eodFlattenedDayKey = na
+
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). No new entries in ET flatten window.
+if bullSfp and not inEodFlattenWindow
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP')
-else if bearSfp
+else if bearSfp and not inEodFlattenWindow
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP')
+
+if flatten330Et and inEodFlattenWindow and strategy.position_size != 0
+    if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
+        strategy.close_all(comment = 'Flatten 3:30 PM ET')
+        eodFlattenedDayKey := dayKeyEt
