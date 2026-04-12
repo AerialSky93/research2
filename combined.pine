@@ -498,3 +498,63 @@ alertcondition(bear_count > bear_count[1], 'Bearish FVG', 'Bearish FVG detected'
 
 alertcondition(bull_mitigated > bull_mitigated[1], 'Bullish FVG Mitigation', 'Bullish FVG mitigated')
 alertcondition(bear_mitigated > bear_mitigated[1], 'Bearish FVG Mitigation', 'Bearish FVG mitigated')
+
+//-----------------------------------------------------------------------------}
+// Appended: SFP confirm → FVG before next swing pivot (marker only; uses existing pivH/pivL, ph/pl, FVG counts)
+//-----------------------------------------------------------------------------{
+enableSfpFvgSeq = input.bool(true, 'SFP → FVG before next swing', group = 'SFP→FVG marker')
+sfpFvgMatchDir = input.bool(true, 'FVG direction matches SFP', group = 'SFP→FVG marker'
+  , tooltip = 'Bearish SFP: bearish FVG only. Bullish SFP: bullish FVG only.')
+showSfpFvgMarker = input.bool(true, 'Show marker on chart', group = 'SFP→FVG marker')
+
+var bool seq_prevHconf = false
+var bool seq_prevLconf = false
+var bool seq_bearSeekFvg = false
+var int seq_bearSeekStart = na
+var bool seq_bullSeekFvg = false
+var int seq_bullSeekStart = na
+
+newFvgThisBar = bull_count > bull_count[1] or bear_count > bear_count[1]
+fvgBullAdded = bull_count > bull_count[1]
+fvgBearAdded = bear_count > bear_count[1]
+bearFvgOk = sfpFvgMatchDir ? fvgBearAdded : newFvgThisBar
+bullFvgOk = sfpFvgMatchDir ? fvgBullAdded : newFvgThisBar
+
+bearSfpConfirmEdge = bear and pivH.confirmed and not seq_prevHconf
+bullSfpConfirmEdge = bull and pivL.confirmed and not seq_prevLconf
+
+if not enableSfpFvgSeq
+    seq_bearSeekFvg := false
+    seq_bullSeekFvg := false
+else
+    if not bear
+        seq_bearSeekFvg := false
+    if not bull
+        seq_bullSeekFvg := false
+    if bear and seq_bearSeekFvg and ph.n() and bar_index > nz(seq_bearSeekStart)
+        seq_bearSeekFvg := false
+    if bull and seq_bullSeekFvg and pl.n() and bar_index > nz(seq_bullSeekStart)
+        seq_bullSeekFvg := false
+    if bearSfpConfirmEdge
+        seq_bearSeekFvg := true
+        seq_bearSeekStart := bar_index
+    if bullSfpConfirmEdge
+        seq_bullSeekFvg := true
+        seq_bullSeekStart := bar_index
+
+hitBearSfpFvgSeq = enableSfpFvgSeq and seq_bearSeekFvg and newFvgThisBar and bar_index > nz(seq_bearSeekStart) and bearFvgOk
+if hitBearSfpFvgSeq
+    seq_bearSeekFvg := false
+
+hitBullSfpFvgSeq = enableSfpFvgSeq and seq_bullSeekFvg and newFvgThisBar and bar_index > nz(seq_bullSeekStart) and bullFvgOk
+if hitBullSfpFvgSeq
+    seq_bullSeekFvg := false
+
+seq_prevHconf := bear ? pivH.confirmed : false
+seq_prevLconf := bull ? pivL.confirmed : false
+
+plotshape(showSfpFvgMarker and hitBearSfpFvgSeq, title = 'Bear SFP→FVG', style = shape.triangledown, location = location.abovebar, color = colBr, size = size.tiny)
+plotshape(showSfpFvgMarker and hitBullSfpFvgSeq, title = 'Bull SFP→FVG', style = shape.triangleup, location = location.belowbar, color = colBl, size = size.tiny)
+
+alertcondition(hitBearSfpFvgSeq, 'Bearish SFP then FVG', 'Bearish swing failure confirmed, FVG formed before next swing pivot')
+alertcondition(hitBullSfpFvgSeq, 'Bullish SFP then FVG', 'Bullish swing failure confirmed, FVG formed before next swing pivot')
