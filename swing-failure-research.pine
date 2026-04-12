@@ -51,14 +51,17 @@ flatten330Et = input.bool(true, 'Flatten at 3:30 PM ET', tooltip = 'Closes all p
 timezoneEt = 'America/New_York'
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
 inEodFlattenWindow = nyMinutes >= 15 * 60 + 30 and nyMinutes < 16 * 60
+// US regular session ends 4:00 PM ET — no new entries at 4:00 PM or later (after-hours / evening).
+beforeEquityRthCloseEt = nyMinutes < 16 * 60
 dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
 
 var int eodFlattenedDayKey = na
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). No new entries in ET flatten window.
-if bullSfp and not inEodFlattenWindow
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). No new entries 3:30–4:00 PM ET or after 4:00 PM ET.
+canEnterSfpEt = not inEodFlattenWindow and beforeEquityRthCloseEt
+if bullSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP')
-else if bearSfp and not inEodFlattenWindow
+else if bearSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP')
 
 if flatten330Et and inEodFlattenWindow and strategy.position_size != 0
