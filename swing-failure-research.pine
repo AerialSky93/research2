@@ -17,22 +17,18 @@ plot(currentSwingLow ? low[1] : na, 'Swing low level', color = color.new(color.t
 plotshape(currentSwingHigh, title = 'Swing high', style = shape.triangledown, location = location.abovebar, offset = -1, size = size.tiny, color = color.orange, text = 'SH')
 plot(currentSwingHigh ? high[1] : na, 'Swing high level', color = color.new(color.orange, 0), style = plot.style_circles, offset = -1, linewidth = 2)
 
-bearRaw = (
-    barstate.isconfirmed
-    and not currentSwingHigh
-    and not na(lastSwingHigh)
-    and (na(lastSwingHighIndex) or bar_index > lastSwingHighIndex)
-    and high > lastSwingHigh
-    and close < lastSwingHigh
-)
-bullRaw = (
-    barstate.isconfirmed
-    and not currentSwingLow
-    and not na(lastSwingLow)
-    and (na(lastSwingLowIndex) or bar_index > lastSwingLowIndex)
-    and low < lastSwingLow
-    and close > lastSwingLow
-)
+bearRaw = barstate.isconfirmed and
+     not currentSwingHigh and
+     not na(lastSwingHigh) and
+     (na(lastSwingHighIndex) or bar_index > lastSwingHighIndex) and
+     high > lastSwingHigh and
+     close < lastSwingHigh
+bullRaw = barstate.isconfirmed and
+     not currentSwingLow and
+     not na(lastSwingLow) and
+     (na(lastSwingLowIndex) or bar_index > lastSwingLowIndex) and
+     low < lastSwingLow and
+     close > lastSwingLow
 
 // first time in cycle
 bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
