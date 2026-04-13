@@ -37,11 +37,6 @@ if swingLow
     lastSwingLow := low[1]
     lastSwingLowIndex := bar_index
 
-if bearSfp
-    label.new(bar_index, high, 'SFP bear\n(sweep ▲ fail)', style = label.style_label_down, color = color.new(color.red, 20), textcolor = color.white, size = size.small)
-if bullSfp
-    label.new(bar_index, low, 'SFP bull\n(sweep ▼ fail)', style = label.style_label_up, color = color.new(color.green, 20), textcolor = color.white, size = size.small)
-
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SFP')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP')
 
