@@ -52,8 +52,8 @@ dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayo
 
 var int eodFlattenedDayKey = na
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). No new entries after 3:00 PM EST, nor during 3:30–4:00 PM ET flatten window.
-canEnterSfpEt = before3pmEt and not inEodFlattenWindow
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`); no new entries after 3:00 PM ET; none during 3:30–4:00 PM ET flatten window.
+canEnterSfpEt = session.ismarket and before3pmEt and not inEodFlattenWindow
 if bullSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
 else if bearSfp and canEnterSfpEt
