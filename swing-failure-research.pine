@@ -1,5 +1,5 @@
 //@version=5
-strategy('Wick swing pivots (3-bar)', 'WickSwingPivots', overlay = true,
+strategy('Swing pivots Wick (3-bar)', 'SwingPivotsWick', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
      commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0,
      process_orders_on_close = true)
@@ -42,8 +42,8 @@ if bearSfp
 if bullSfp
     label.new(bar_index, low, 'SFP bull\n(sweep ▼ fail)', style = label.style_label_up, color = color.new(color.green, 20), textcolor = color.white, size = size.small)
 
-plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'Sf')
-plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'Sf')
+plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SFP')
+plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP')
 
 
 flatten330Et = input.bool(true, 'Flatten at 3:30 PM ET', tooltip = 'Closes all positions once per session day during 3:30–4:00 PM America/New_York. Use an intraday chart so bars exist in that window.')
@@ -60,9 +60,9 @@ var int eodFlattenedDayKey = na
 // Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). No new entries 3:30–4:00 PM ET or after 4:00 PM ET.
 canEnterSfpEt = not inEodFlattenWindow and beforeEquityRthCloseEt
 if bullSfp and canEnterSfpEt
-    strategy.entry('SFP', strategy.long, comment = 'Bull SFP')
+    strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
 else if bearSfp and canEnterSfpEt
-    strategy.entry('SFP', strategy.short, comment = 'Bear SFP')
+    strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
 
 if flatten330Et and inEodFlattenWindow and strategy.position_size != 0
     if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
