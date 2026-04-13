@@ -30,12 +30,17 @@ bullRaw = barstate.isconfirmed and not na(lastSwingLow) and (na(lastSwingLowInde
 bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
 bullSfp = bullRaw and (na(bullRaw[1]) or not bullRaw[1])
 
+// Opposite pivot is cleared when a new one prints so bear/bull SFP context does not overlap.
 if swingHigh
     lastSwingHigh := high[1]
     lastSwingHighIndex := bar_index
+    lastSwingLow := na
+    lastSwingLowIndex := na
 if swingLow
     lastSwingLow := low[1]
     lastSwingLowIndex := bar_index
+    lastSwingHigh := na
+    lastSwingHighIndex := na
 
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SFP')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP')
