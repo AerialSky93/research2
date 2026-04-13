@@ -41,25 +41,25 @@ plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = locat
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP')
 
 
-flatten330Et = input.bool(true, 'Flatten at 3:30 PM ET', tooltip = 'Closes all positions once per session day during 3:30–4:00 PM America/New_York. Use an intraday chart so bars exist in that window.')
+flatten3pmEt = input.bool(true, 'Flatten at 3:00 PM ET', tooltip = 'Closes all positions once per session day on the first bar at or after 3:00 PM America/New_York (through end of hour for bar alignment). Use an intraday chart so bars exist in that window.')
 
 timezoneEt = 'America/New_York'
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
-inEodFlattenWindow = nyMinutes >= 15 * 60 + 30 and nyMinutes < 16 * 60
-// No new opening trades after 3:00 PM EST
-before3pmEt = nyMinutes < 15 * 60
+inEodFlattenWindow = nyMinutes >= 15 * 60 and nyMinutes < 16 * 60
+// No new opening trades on or after 2:00 PM ET
+before2pmEt = nyMinutes < 14 * 60
 dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
 
 var int eodFlattenedDayKey = na
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`); no new entries after 3:00 PM ET; none during 3:30–4:00 PM ET flatten window.
-canEnterSfpEt = session.ismarket and before3pmEt and not inEodFlattenWindow
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`); no new entries at/after 2:00 PM ET
+canEnterSfpEt = session.ismarket and before2pmEt and not inEodFlattenWindow
 if bullSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
 else if bearSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
 
-if flatten330Et and inEodFlattenWindow and strategy.position_size != 0
+if flatten3pmEt and inEodFlattenWindow and strategy.position_size != 0
     if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
-        strategy.close_all(comment = 'Flatten 3:30 PM ET')
+        strategy.close_all(comment = 'Flatten 3:00 PM ET')
         eodFlattenedDayKey := dayKeyEt
