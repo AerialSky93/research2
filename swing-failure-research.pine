@@ -9,17 +9,17 @@ var float lastSwingLow = na
 var int lastSwingHighIndex = na
 var int lastSwingLowIndex = na
 
-swingLow = barstate.isconfirmed and low[1] < low[0] and low[1] < low[2]
-swingHigh = barstate.isconfirmed and high[1] > high[0] and high[1] > high[2]
+currentSwingLow = barstate.isconfirmed and low[1] < low[0] and low[1] < low[2]
+currentSwingHigh = barstate.isconfirmed and high[1] > high[0] and high[1] > high[2]
 
-plotshape(swingLow, title = 'Swing low', style = shape.triangleup, location = location.belowbar, offset = -1, size = size.tiny, color = color.teal, text = 'SL')
-plot(swingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0), style = plot.style_circles, offset = -1, linewidth = 2)
-plotshape(swingHigh, title = 'Swing high', style = shape.triangledown, location = location.abovebar, offset = -1, size = size.tiny, color = color.orange, text = 'SH')
-plot(swingHigh ? high[1] : na, 'Swing high level', color = color.new(color.orange, 0), style = plot.style_circles, offset = -1, linewidth = 2)
+plotshape(currentSwingLow, title = 'Swing low', style = shape.triangleup, location = location.belowbar, offset = -1, size = size.tiny, color = color.teal, text = 'SL')
+plot(currentSwingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0), style = plot.style_circles, offset = -1, linewidth = 2)
+plotshape(currentSwingHigh, title = 'Swing high', style = shape.triangledown, location = location.abovebar, offset = -1, size = size.tiny, color = color.orange, text = 'SH')
+plot(currentSwingHigh ? high[1] : na, 'Swing high level', color = color.new(color.orange, 0), style = plot.style_circles, offset = -1, linewidth = 2)
 
 bearRaw = (
     barstate.isconfirmed
-    and not swingHigh
+    and not currentSwingHigh
     and not na(lastSwingHigh)
     and (na(lastSwingHighIndex) or bar_index > lastSwingHighIndex)
     and high > lastSwingHigh
@@ -27,7 +27,7 @@ bearRaw = (
 )
 bullRaw = (
     barstate.isconfirmed
-    and not swingLow
+    and not currentSwingLow
     and not na(lastSwingLow)
     and (na(lastSwingLowIndex) or bar_index > lastSwingLowIndex)
     and low < lastSwingLow
@@ -38,12 +38,12 @@ bullRaw = (
 bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
 bullSfp = bullRaw and (na(bullRaw[1]) or not bullRaw[1])
 
-if swingHigh
+if currentSwingHigh
     lastSwingHigh := high[1]
     lastSwingHighIndex := bar_index
     lastSwingLow := na
     lastSwingLowIndex := na
-if swingLow
+if currentSwingLow
     lastSwingLow := low[1]
     lastSwingLowIndex := bar_index
     lastSwingHigh := na
