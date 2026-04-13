@@ -17,16 +17,27 @@ plot(swingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0)
 plotshape(swingHigh, title = 'Swing high', style = shape.triangledown, location = location.abovebar, offset = -1, size = size.tiny, color = color.orange, text = 'SH')
 plot(swingHigh ? high[1] : na, 'Swing high level', color = color.new(color.orange, 0), style = plot.style_circles, offset = -1, linewidth = 2)
 
-// Wick breaks prior swing high / low, then closes back inside. Sweep must be AFTER that swing level is committed
-// (strictly later bar), and not on the same bar we print a new swing high / low.
-bearRaw = barstate.isconfirmed and not na(lastSwingHigh) and (na(lastSwingHighIndex) or bar_index > lastSwingHighIndex) and not swingHigh and high > lastSwingHigh and close < lastSwingHigh
-bullRaw = barstate.isconfirmed and not na(lastSwingLow) and (na(lastSwingLowIndex) or bar_index > lastSwingLowIndex) and not swingLow and low < lastSwingLow and close > lastSwingLow
+bearRaw = (
+    barstate.isconfirmed
+    and not swingHigh
+    and not na(lastSwingHigh)
+    and (na(lastSwingHighIndex) or bar_index > lastSwingHighIndex)
+    and high > lastSwingHigh
+    and close < lastSwingHigh
+)
+bullRaw = (
+    barstate.isconfirmed
+    and not swingLow
+    and not na(lastSwingLow)
+    and (na(lastSwingLowIndex) or bar_index > lastSwingLowIndex)
+    and low < lastSwingLow
+    and close > lastSwingLow
+)
 
 // first time in cycle
 bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
 bullSfp = bullRaw and (na(bullRaw[1]) or not bullRaw[1])
 
-// Opposite pivot is cleared when a new one prints so bear/bull SFP context does not overlap.
 if swingHigh
     lastSwingHigh := high[1]
     lastSwingHighIndex := bar_index
@@ -40,9 +51,6 @@ if swingLow
 
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SFP')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP')
-
-
-flatten3pmEt = input.bool(true, 'Flatten at 3:00 PM ET', tooltip = 'Closes all positions once per session day on the first bar at or after 3:00 PM America/New_York (through end of hour for bar alignment). Use an intraday chart so bars exist in that window.')
 
 timezoneEt = 'America/New_York'
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
@@ -60,7 +68,7 @@ if bullSfp and canEnterSfpEt
 else if bearSfp and canEnterSfpEt
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
 
-if flatten3pmEt and inEodFlattenWindow and strategy.position_size != 0
+if inEodFlattenWindow and strategy.position_size != 0
     if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
         strategy.close_all(comment = 'Flatten 3:00 PM ET')
         eodFlattenedDayKey := dayKeyEt
