@@ -23,9 +23,9 @@ var array<int> swingHighBars = array.new_int()
 var array<float> swingLowPrices = array.new_float()
 var array<int> swingLowBars = array.new_int()
 visibleSwingHighs = input.int(250, 'Max swing high lines', minval = 1, maxval = 250,
-     tooltip = 'Maximum preserved swing-high line segments drawn from the selected start date.')
+     tooltip = 'Swing-high line segments drawn from selected start date.')
 visibleSwingLows = input.int(250, 'Max swing low lines', minval = 1, maxval = 250,
-     tooltip = 'Maximum preserved swing-low line segments drawn from the selected start date.')
+     tooltip = 'Swing-low line segments drawn from selected start date.')
 var array<line> swingHighLines = array.new_line()
 var array<line> swingLowLines = array.new_line()
 
