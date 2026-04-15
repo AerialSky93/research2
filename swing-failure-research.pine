@@ -2,7 +2,7 @@
 strategy('Swing pivots Wick (3-bar)', 'SwingPivotsWick', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
      commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0,
-     process_orders_on_close = true, max_lines_count = 500)
+     process_orders_on_close = true, max_lines_count = 500, max_labels_count = 500)
 
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long swing pivots stay in memory for SFP (hours converted to bars).')
@@ -17,12 +17,16 @@ var array<float> swingHighPrices = array.new_float()
 var array<int> swingHighBars = array.new_int()
 var array<float> swingLowPrices = array.new_float()
 var array<int> swingLowBars = array.new_int()
-var float activeSwingHighLevel = na
-var int activeSwingHighUntil = na
-var float activeSwingLowLevel = na
-var int activeSwingLowUntil = na
-var bool activeSwingHighPlotPrimary = true
-var bool activeSwingLowPlotPrimary = true
+visibleSwingHighs = input.int(5, 'Visible swing highs', minval = 1, maxval = 50,
+     tooltip = 'Lux-style behavior: only keep a small set of current unbroken swing-high levels on the chart.')
+visibleSwingLows = input.int(5, 'Visible swing lows', minval = 1, maxval = 50,
+     tooltip = 'Lux-style behavior: only keep a small set of current unbroken swing-low levels on the chart.')
+var array<line> swingHighLines = array.new_line()
+var array<float> swingHighLinePrices = array.new_float()
+var array<int> swingHighLineEnds = array.new_int()
+var array<line> swingLowLines = array.new_line()
+var array<float> swingLowLinePrices = array.new_float()
+var array<int> swingLowLineEnds = array.new_int()
 
 currentSwingLow = barstate.isconfirmed and low[1] < low[0] and low[1] < low[2]
 currentSwingHigh = barstate.isconfirmed and high[1] > high[0] and high[1] > high[2]
@@ -42,34 +46,56 @@ while array.size(swingLowBars) > 0
     array.shift(swingLowPrices)
     array.shift(swingLowBars)
 
+highLineIndex = array.size(swingHighLines) - 1
+while highLineIndex >= 0
+    activeHighPrice = array.get(swingHighLinePrices, highLineIndex)
+    activeHighEnd = array.get(swingHighLineEnds, highLineIndex)
+    activeHighBroken = close > activeHighPrice
+    activeHighExpired = time > activeHighEnd
+    if activeHighBroken or activeHighExpired
+        line.delete(array.get(swingHighLines, highLineIndex))
+        array.remove(swingHighLines, highLineIndex)
+        array.remove(swingHighLinePrices, highLineIndex)
+        array.remove(swingHighLineEnds, highLineIndex)
+    highLineIndex -= 1
+
+lowLineIndex = array.size(swingLowLines) - 1
+while lowLineIndex >= 0
+    activeLowPrice = array.get(swingLowLinePrices, lowLineIndex)
+    activeLowEnd = array.get(swingLowLineEnds, lowLineIndex)
+    activeLowBroken = close < activeLowPrice
+    activeLowExpired = time > activeLowEnd
+    if activeLowBroken or activeLowExpired
+        line.delete(array.get(swingLowLines, lowLineIndex))
+        array.remove(swingLowLines, lowLineIndex)
+        array.remove(swingLowLinePrices, lowLineIndex)
+        array.remove(swingLowLineEnds, lowLineIndex)
+    lowLineIndex -= 1
+
 if currentSwingHigh
     pSh = high[1]
+    highLineEnd = time[1] + msToExtend
     array.push(swingHighPrices, pSh)
     array.push(swingHighBars, bar_index)
-    activeSwingHighLevel := pSh
-    activeSwingHighUntil := time[1] + msToExtend
-    activeSwingHighPlotPrimary := not activeSwingHighPlotPrimary
+    array.push(swingHighLines, line.new(time[1], pSh, time, pSh, xloc = xloc.bar_time, extend = extend.right, color = color.new(#E78F97, 0), width = swingPlotWidth))
+    array.push(swingHighLinePrices, pSh)
+    array.push(swingHighLineEnds, highLineEnd)
+    if array.size(swingHighLines) > visibleSwingHighs
+        line.delete(array.shift(swingHighLines))
+        array.shift(swingHighLinePrices)
+        array.shift(swingHighLineEnds)
 if currentSwingLow
     pSl = low[1]
+    lowLineEnd = time[1] + msToExtend
     array.push(swingLowPrices, pSl)
     array.push(swingLowBars, bar_index)
-    activeSwingLowLevel := pSl
-    activeSwingLowUntil := time[1] + msToExtend
-    activeSwingLowPlotPrimary := not activeSwingLowPlotPrimary
-
-// Alternate between plot channels so each new level starts at the pivot bar
-// without TradingView drawing connectors between different swing levels.
-activeSwingHighPlotRaw = not na(activeSwingHighUntil) and time <= activeSwingHighUntil ? activeSwingHighLevel : na
-activeSwingLowPlotRaw = not na(activeSwingLowUntil) and time <= activeSwingLowUntil ? activeSwingLowLevel : na
-activeSwingHighPlotA = activeSwingHighPlotPrimary ? activeSwingHighPlotRaw : na
-activeSwingHighPlotB = activeSwingHighPlotPrimary ? na : activeSwingHighPlotRaw
-activeSwingLowPlotA = activeSwingLowPlotPrimary ? activeSwingLowPlotRaw : na
-activeSwingLowPlotB = activeSwingLowPlotPrimary ? na : activeSwingLowPlotRaw
-
-plot(activeSwingHighPlotA, 'Swing High 24H A', color = color.new(#E78F97, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingHighPlotB, 'Swing High 24H B', color = color.new(#E78F97, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingLowPlotA, 'Swing Low 24H A', color = color.new(#73C8BA, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingLowPlotB, 'Swing Low 24H B', color = color.new(#73C8BA, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+    array.push(swingLowLines, line.new(time[1], pSl, time, pSl, xloc = xloc.bar_time, extend = extend.right, color = color.new(#73C8BA, 0), width = swingPlotWidth))
+    array.push(swingLowLinePrices, pSl)
+    array.push(swingLowLineEnds, lowLineEnd)
+    if array.size(swingLowLines) > visibleSwingLows
+        line.delete(array.shift(swingLowLines))
+        array.shift(swingLowLinePrices)
+        array.shift(swingLowLineEnds)
 
 plotshape(currentSwingLow, title = 'Swing low', style = shape.triangleup, location = location.belowbar, offset = -1, size = size.tiny, color = color.teal, text = '\nSL')
 plot(currentSwingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0), style = plot.style_circles, offset = -1, linewidth = 2)
