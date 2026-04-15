@@ -11,17 +11,20 @@ swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, s
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
 drawLinesFrom = input.time(timestamp('10 Dec 2025 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
+historicalWindowDays = input.int(7, 'Historical window (days)', minval = 1, maxval = 365,
+     tooltip = 'How many calendar days after "Draw lines from" are allowed for horizontal line creation.')
 tfSec = math.max(timeframe.in_seconds(), 1)
 swingWindowBars = math.max(1, int(math.round(swingHistoryHours * 3600.0 / tfSec)))
 msToExtend = int(swingPlotHours * 60.0 * 60.0 * 1000.0)
+drawLinesUntil = drawLinesFrom + historicalWindowDays * 24 * 60 * 60 * 1000
 
 var array<float> swingHighPrices = array.new_float()
 var array<int> swingHighBars = array.new_int()
 var array<float> swingLowPrices = array.new_float()
 var array<int> swingLowBars = array.new_int()
-visibleSwingHighs = input.int(100, 'Max swing high lines', minval = 1, maxval = 250,
+visibleSwingHighs = input.int(250, 'Max swing high lines', minval = 1, maxval = 250,
      tooltip = 'Maximum preserved swing-high line segments drawn from the selected start date.')
-visibleSwingLows = input.int(100, 'Max swing low lines', minval = 1, maxval = 250,
+visibleSwingLows = input.int(250, 'Max swing low lines', minval = 1, maxval = 250,
      tooltip = 'Maximum preserved swing-low line segments drawn from the selected start date.')
 var array<line> swingHighLines = array.new_line()
 var array<line> swingLowLines = array.new_line()
@@ -50,7 +53,7 @@ if currentSwingHigh
     highLineEnd = pivotTime + msToExtend
     array.push(swingHighPrices, pSh)
     array.push(swingHighBars, bar_index)
-    if pivotTime >= drawLinesFrom
+    if pivotTime >= drawLinesFrom and pivotTime < drawLinesUntil
         array.push(swingHighLines, line.new(pivotTime, pSh, highLineEnd, pSh, xloc = xloc.bar_time, extend = extend.none, color = color.new(#E78F97, 0), width = swingPlotWidth))
         if array.size(swingHighLines) > visibleSwingHighs
             line.delete(array.shift(swingHighLines))
@@ -60,7 +63,7 @@ if currentSwingLow
     lowLineEnd = pivotTime + msToExtend
     array.push(swingLowPrices, pSl)
     array.push(swingLowBars, bar_index)
-    if pivotTime >= drawLinesFrom
+    if pivotTime >= drawLinesFrom and pivotTime < drawLinesUntil
         array.push(swingLowLines, line.new(pivotTime, pSl, lowLineEnd, pSl, xloc = xloc.bar_time, extend = extend.none, color = color.new(#73C8BA, 0), width = swingPlotWidth))
         if array.size(swingLowLines) > visibleSwingLows
             line.delete(array.shift(swingLowLines))
