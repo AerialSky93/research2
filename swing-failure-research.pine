@@ -53,12 +53,12 @@ if currentSwingLow
     activeSwingLowLevel := pSl
     activeSwingLowUntil := time[1] + msToExtend
 
-// Plot-based display avoids TradingView's line-object limit.
+// Use step plots so level changes stay horizontal instead of drawing diagonals.
 activeSwingHighPlot = not na(activeSwingHighUntil) and time <= activeSwingHighUntil ? activeSwingHighLevel : na
 activeSwingLowPlot = not na(activeSwingLowUntil) and time <= activeSwingLowUntil ? activeSwingLowLevel : na
 
-plot(activeSwingHighPlot, 'Swing High 24H', color = color.new(color.yellow, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingLowPlot, 'Swing Low 24H', color = color.new(color.aqua, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingHighPlot, 'Swing High 24H', color = color.new(color.yellow, 0), style = plot.style_stepline, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingLowPlot, 'Swing Low 24H', color = color.new(color.aqua, 0), style = plot.style_stepline, offset = -1, linewidth = swingPlotWidth)
 
 plotshape(currentSwingLow, title = 'Swing low', style = shape.triangleup, location = location.belowbar, offset = -1, size = size.tiny, color = color.teal, text = 'SL')
 plot(currentSwingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0), style = plot.style_circles, offset = -1, linewidth = 2)
