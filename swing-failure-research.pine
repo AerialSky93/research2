@@ -66,10 +66,10 @@ activeSwingHighPlotB = activeSwingHighPlotPrimary ? na : activeSwingHighPlotRaw
 activeSwingLowPlotA = activeSwingLowPlotPrimary ? activeSwingLowPlotRaw : na
 activeSwingLowPlotB = activeSwingLowPlotPrimary ? na : activeSwingLowPlotRaw
 
-plot(activeSwingHighPlotA, 'Swing High 24H A', color = color.new(color.yellow, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingHighPlotB, 'Swing High 24H B', color = color.new(color.yellow, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingLowPlotA, 'Swing Low 24H A', color = color.new(color.aqua, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
-plot(activeSwingLowPlotB, 'Swing Low 24H B', color = color.new(color.aqua, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingHighPlotA, 'Swing High 24H A', color = color.new(#E78F97, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingHighPlotB, 'Swing High 24H B', color = color.new(#E78F97, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingLowPlotA, 'Swing Low 24H A', color = color.new(#73C8BA, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
+plot(activeSwingLowPlotB, 'Swing Low 24H B', color = color.new(#73C8BA, 0), style = plot.style_linebr, offset = -1, linewidth = swingPlotWidth)
 
 plotshape(currentSwingLow, title = 'Swing low', style = shape.triangleup, location = location.belowbar, offset = -1, size = size.tiny, color = color.teal, text = 'SL')
 plot(currentSwingLow ? low[1] : na, 'Swing low level', color = color.new(color.teal, 0), style = plot.style_circles, offset = -1, linewidth = 2)
