@@ -114,6 +114,13 @@ plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = locat
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP\n')
 
 timezoneEt = 'America/New_York'
+formatTimeEt(ts) =>
+    hh = hour(ts, timezoneEt)
+    mm = minute(ts, timezoneEt)
+    hhText = hh < 10 ? '0' + str.tostring(hh) : str.tostring(hh)
+    mmText = mm < 10 ? '0' + str.tostring(mm) : str.tostring(mm)
+    hhText + ':' + mmText
+
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
 inEodFlattenWindow = nyMinutes >= 15 * 60 and nyMinutes < 16 * 60
 dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
@@ -159,9 +166,14 @@ if inDrawWindow
     log.info(logPrefix + 'bearEntryBar=' + str.tostring(bearEntryBar))
     log.info(logPrefix + 'process_orders_on_close=false')
 
-plotshape(bullEntryBar, title = 'Bull entry bar', style = shape.labelup, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'BUY')
-plotshape(bearEntryBar, title = 'Bear entry bar', style = shape.labeldown, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SELL')
-plotshape(timedExitDue or eodExitDue, title = 'Exit', style = shape.labeldown, location = location.abovebar, size = size.tiny, color = color.new(color.yellow, 0), text = 'EXIT', textcolor = color.black)
+if bullEntryBar
+    label.new(bar_index, low, 'BUY\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.belowbar, style = label.style_label_up, color = color.new(color.lime, 0), textcolor = color.white, size = size.tiny)
+
+if bearEntryBar
+    label.new(bar_index, high, 'SELL\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.red, 0), textcolor = color.white, size = size.tiny)
+
+if timedExitDue or eodExitDue
+    label.new(bar_index, high, 'EXIT\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.yellow, 0), textcolor = color.black, size = size.tiny)
 if submitBullEntry
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
 else if submitBearEntry
