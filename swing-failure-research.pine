@@ -1,18 +1,20 @@
 //@version=5
-strategy('Swing pivots Wick (3-bar)', 'SwingPivotsWick', overlay = true,
+strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
      commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 0,
-     process_orders_on_close = true, max_lines_count = 500, max_labels_count = 500)
+     process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long swing pivots stay in memory for SFP (hours converted to bars).')
 swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long confirmed swing-high and swing-low plots remain visible.')
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
-drawLinesFrom = input.time(timestamp('10 Dec 2025 00:00 +0000'), 'Draw lines from',
+drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
 historicalWindowDays = input.int(7, 'Historical window (days)', minval = 1, maxval = 365,
      tooltip = 'How many calendar days after "Draw lines from" are allowed for horizontal line creation.')
+enableDebugLogs = input.bool(false, 'Enable debug logs',
+     tooltip = 'Logs SFP detection, entry gating, and the bar immediately after an SFP.')
 tfSec = math.max(timeframe.in_seconds(), 1)
 swingWindowBars = math.max(1, int(math.round(swingHistoryHours * 3600.0 / tfSec)))
 msToExtend = int(swingPlotHours * 60.0 * 60.0 * 1000.0)
@@ -100,6 +102,8 @@ bullRaw = bullSweepAny
 // first time in cycle
 bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
 bullSfp = bullRaw and (na(bullRaw[1]) or not bullRaw[1])
+bullSfpPrevBar = bar_index > 0 and bullSfp[1]
+bearSfpPrevBar = bar_index > 0 and bearSfp[1]
 
 plotshape(bearSfp, title = 'Bearish SFP', style = shape.xcross, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = '\nSFP')
 plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'SFP\n')
@@ -107,17 +111,41 @@ plotshape(bullSfp, title = 'Bullish SFP', style = shape.xcross, location = locat
 timezoneEt = 'America/New_York'
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
 inEodFlattenWindow = nyMinutes >= 15 * 60 and nyMinutes < 16 * 60
-// No new opening trades on or after 2:00 PM ET
-before2pmEt = nyMinutes < 14 * 60
 dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
+barDateTimeEt = str.tostring(year(time, timezoneEt)) + '-' + str.tostring(month(time, timezoneEt)) + '-' + str.tostring(dayofmonth(time, timezoneEt)) + ' ' + str.tostring(hour(time, timezoneEt)) + ':' + str.tostring(minute(time, timezoneEt))
+logPrefix = 'barDateTimeEt=' + barDateTimeEt + ' '
+inDrawWindow = time >= drawLinesFrom and time < drawLinesUntil
 
 var int eodFlattenedDayKey = na
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`); no new entries at/after 2:00 PM ET
-canEnterSfpEt = session.ismarket and before2pmEt and not inEodFlattenWindow
-if bullSfp and canEnterSfpEt
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`) and outside the flatten window.
+canEnterSfpEt = session.ismarket and not inEodFlattenWindow
+submitBullEntry = inDrawWindow and bullSfp and canEnterSfpEt
+submitBearEntry = inDrawWindow and bearSfp and canEnterSfpEt
+bullEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bullSfp[1] and canEnterSfpEt[1]
+bearEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bearSfp[1] and canEnterSfpEt[1]
+
+if inDrawWindow
+    log.info(logPrefix + 'bar_index=' + str.tostring(bar_index))
+    log.info(logPrefix + 'bullSfp=' + str.tostring(bullSfp))
+    log.info(logPrefix + 'bearSfp=' + str.tostring(bearSfp))
+    log.info(logPrefix + 'bullSfpPrevBar=' + str.tostring(bullSfpPrevBar))
+    log.info(logPrefix + 'bearSfpPrevBar=' + str.tostring(bearSfpPrevBar))
+    log.info(logPrefix + 'canEnterSfpEt=' + str.tostring(canEnterSfpEt))
+    log.info(logPrefix + 'session.ismarket=' + str.tostring(session.ismarket))
+    log.info(logPrefix + 'inEodFlattenWindow=' + str.tostring(inEodFlattenWindow))
+    log.info(logPrefix + 'strategy.position_size=' + str.tostring(strategy.position_size))
+    log.info(logPrefix + 'submitBullEntry=' + str.tostring(submitBullEntry))
+    log.info(logPrefix + 'submitBearEntry=' + str.tostring(submitBearEntry))
+    log.info(logPrefix + 'bullEntryBar=' + str.tostring(bullEntryBar))
+    log.info(logPrefix + 'bearEntryBar=' + str.tostring(bearEntryBar))
+    log.info(logPrefix + 'process_orders_on_close=false')
+
+plotshape(bullEntryBar, title = 'Bull entry bar', style = shape.labelup, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'BUY')
+plotshape(bearEntryBar, title = 'Bear entry bar', style = shape.labeldown, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SELL')
+if submitBullEntry
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
-else if bearSfp and canEnterSfpEt
+else if submitBearEntry
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
 
 if inEodFlattenWindow and strategy.position_size != 0
