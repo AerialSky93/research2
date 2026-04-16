@@ -9,6 +9,10 @@ swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, st
 swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long confirmed swing-high and swing-low plots remain visible.')
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
+maxHoldHours = input.float(3.0, 'Max hold time (hours)', minval = 0.25, step = 0.25,
+     tooltip = 'Closes any open position after this many hours from entry.')
+enableEodFlatten = input.bool(false, 'Enable 3:00 PM ET closeout',
+     tooltip = 'When enabled, closes open positions during the 3:00 PM ET hour and blocks new entries in that window.')
 drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
 historicalWindowDays = input.int(7, 'Historical window (days)', minval = 1, maxval = 365,
@@ -18,6 +22,7 @@ enableDebugLogs = input.bool(false, 'Enable debug logs',
 tfSec = math.max(timeframe.in_seconds(), 1)
 swingWindowBars = math.max(1, int(math.round(swingHistoryHours * 3600.0 / tfSec)))
 msToExtend = int(swingPlotHours * 60.0 * 60.0 * 1000.0)
+maxHoldMs = int(maxHoldHours * 60.0 * 60.0 * 1000.0)
 drawLinesUntil = drawLinesFrom + historicalWindowDays * 24 * 60 * 60 * 1000
 
 var array<float> swingHighPrices = array.new_float()
@@ -117,9 +122,21 @@ logPrefix = 'barDateTimeEt=' + barDateTimeEt + ' '
 inDrawWindow = time >= drawLinesFrom and time < drawLinesUntil
 
 var int eodFlattenedDayKey = na
+var int positionEntryTime = na
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`) and outside the flatten window.
-canEnterSfpEt = session.ismarket and not inEodFlattenWindow
+positionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
+positionReversed = strategy.position_size > 0 and strategy.position_size[1] < 0 or strategy.position_size < 0 and strategy.position_size[1] > 0
+
+if positionOpened or positionReversed
+    positionEntryTime := time
+else if strategy.position_size == 0
+    positionEntryTime := na
+
+timedExitDue = strategy.position_size != 0 and not na(positionEntryTime) and time - positionEntryTime >= maxHoldMs
+eodExitDue = enableEodFlatten and inEodFlattenWindow and strategy.position_size != 0 and (na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt)
+
+// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`).
+canEnterSfpEt = session.ismarket and (not enableEodFlatten or not inEodFlattenWindow)
 submitBullEntry = inDrawWindow and bullSfp and canEnterSfpEt
 submitBearEntry = inDrawWindow and bearSfp and canEnterSfpEt
 bullEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bullSfp[1] and canEnterSfpEt[1]
@@ -133,6 +150,7 @@ if inDrawWindow
     log.info(logPrefix + 'bearSfpPrevBar=' + str.tostring(bearSfpPrevBar))
     log.info(logPrefix + 'canEnterSfpEt=' + str.tostring(canEnterSfpEt))
     log.info(logPrefix + 'session.ismarket=' + str.tostring(session.ismarket))
+    log.info(logPrefix + 'enableEodFlatten=' + str.tostring(enableEodFlatten))
     log.info(logPrefix + 'inEodFlattenWindow=' + str.tostring(inEodFlattenWindow))
     log.info(logPrefix + 'strategy.position_size=' + str.tostring(strategy.position_size))
     log.info(logPrefix + 'submitBullEntry=' + str.tostring(submitBullEntry))
@@ -143,12 +161,15 @@ if inDrawWindow
 
 plotshape(bullEntryBar, title = 'Bull entry bar', style = shape.labelup, location = location.belowbar, size = size.tiny, color = color.new(color.lime, 0), text = 'BUY')
 plotshape(bearEntryBar, title = 'Bear entry bar', style = shape.labeldown, location = location.abovebar, size = size.tiny, color = color.new(color.red, 0), text = 'SELL')
+plotshape(timedExitDue or eodExitDue, title = 'Exit', style = shape.labeldown, location = location.abovebar, size = size.tiny, color = color.new(color.yellow, 0), text = 'EXIT', textcolor = color.black)
 if submitBullEntry
     strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
 else if submitBearEntry
     strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
 
-if inEodFlattenWindow and strategy.position_size != 0
-    if na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt
-        strategy.close_all(comment = 'Flatten 3:00 PM ET')
-        eodFlattenedDayKey := dayKeyEt
+if timedExitDue
+    strategy.close_all(comment = 'Timed exit after 3 hours')
+
+if eodExitDue
+    strategy.close_all(comment = 'Flatten 3:00 PM ET')
+    eodFlattenedDayKey := dayKeyEt
