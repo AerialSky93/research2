@@ -1,7 +1,7 @@
 //@version=5
 strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
-     commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 1,
+     commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 10,
      process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
@@ -133,8 +133,9 @@ var int positionEntryTime = na
 
 positionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
 positionReversed = strategy.position_size > 0 and strategy.position_size[1] < 0 or strategy.position_size < 0 and strategy.position_size[1] > 0
+positionAdded = math.abs(strategy.position_size) > math.abs(strategy.position_size[1]) and strategy.position_size * strategy.position_size[1] > 0
 
-if positionOpened or positionReversed
+if positionOpened or positionReversed or positionAdded
     positionEntryTime := time
 else if strategy.position_size == 0
     positionEntryTime := na
@@ -148,6 +149,14 @@ submitBullEntry = inDrawWindow and bullSfp and canEnterSfpEt
 submitBearEntry = inDrawWindow and bearSfp and canEnterSfpEt
 bullEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bullSfp[1] and canEnterSfpEt[1]
 bearEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bearSfp[1] and canEnterSfpEt[1]
+timedExitDeferredForEntry = timedExitDue and (submitBullEntry or submitBearEntry)
+timedExitNow = timedExitDue and not timedExitDeferredForEntry
+actualLongEntryBar = (positionOpened or positionReversed or positionAdded) and strategy.position_size > 0
+actualShortEntryBar = (positionOpened or positionReversed or positionAdded) and strategy.position_size < 0
+nextBullEntryNumber = strategy.position_size > 0 ? strategy.opentrades + 1 : 1
+nextBearEntryNumber = strategy.position_size < 0 ? strategy.opentrades + 1 : 1
+nextBullEntryId = 'SFP Long ' + str.tostring(nextBullEntryNumber)
+nextBearEntryId = 'SFP Short ' + str.tostring(nextBearEntryNumber)
 
 if inDrawWindow
     log.info(logPrefix + 'bar_index=' + str.tostring(bar_index))
@@ -164,22 +173,28 @@ if inDrawWindow
     log.info(logPrefix + 'submitBearEntry=' + str.tostring(submitBearEntry))
     log.info(logPrefix + 'bullEntryBar=' + str.tostring(bullEntryBar))
     log.info(logPrefix + 'bearEntryBar=' + str.tostring(bearEntryBar))
+    log.info(logPrefix + 'positionAdded=' + str.tostring(positionAdded))
+    log.info(logPrefix + 'timedExitDue=' + str.tostring(timedExitDue))
+    log.info(logPrefix + 'timedExitDeferredForEntry=' + str.tostring(timedExitDeferredForEntry))
+    log.info(logPrefix + 'timedExitNow=' + str.tostring(timedExitNow))
+    log.info(logPrefix + 'actualLongEntryBar=' + str.tostring(actualLongEntryBar))
+    log.info(logPrefix + 'actualShortEntryBar=' + str.tostring(actualShortEntryBar))
     log.info(logPrefix + 'process_orders_on_close=false')
 
-if bullEntryBar
+if actualLongEntryBar
     label.new(bar_index, low, 'BUY\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.belowbar, style = label.style_label_up, color = color.new(color.lime, 0), textcolor = color.white, size = size.tiny)
 
-if bearEntryBar
+if actualShortEntryBar
     label.new(bar_index, high, 'SELL\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.red, 0), textcolor = color.white, size = size.tiny)
 
-if timedExitDue or eodExitDue
+if timedExitNow or eodExitDue
     label.new(bar_index, high, 'EXIT\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.yellow, 0), textcolor = color.black, size = size.tiny)
 if submitBullEntry
-    strategy.entry('SFP', strategy.long, comment = 'Bull SFP Trade')
+    strategy.entry(nextBullEntryId, strategy.long, comment = 'Bull SFP Trade')
 else if submitBearEntry
-    strategy.entry('SFP', strategy.short, comment = 'Bear SFP Trade')
+    strategy.entry(nextBearEntryId, strategy.short, comment = 'Bear SFP Trade')
 
-if timedExitDue
+if timedExitNow
     strategy.close_all(comment = 'Timed exit after 3 hours')
 
 if eodExitDue
