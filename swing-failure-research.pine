@@ -17,7 +17,7 @@ drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
 historicalWindowDays = input.int(7, 'Historical window (days)', minval = 1, maxval = 365,
      tooltip = 'How many calendar days after "Draw lines from" are allowed for horizontal line creation.')
-enableDebugLogs = input.bool(false, 'Enable debug logs',
+enableDebugLogs = input.bool(true, 'Enable debug logs',
      tooltip = 'Logs SFP detection, entry gating, and the bar immediately after an SFP.')
 tfSec = math.max(timeframe.in_seconds(), 1)
 swingWindowBars = math.max(1, int(math.round(swingHistoryHours * 3600.0 / tfSec)))
