@@ -1,7 +1,7 @@
 //@version=5
 strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay = true,
      initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 10,
-     commission_type = strategy.commission.percent, commission_value = 0.1, pyramiding = 10,
+     commission_type = strategy.commission.percent, commission_value = 0.0, pyramiding = 10,
      process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
@@ -9,6 +9,8 @@ swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, st
 swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long confirmed swing-high and swing-low plots remain visible.')
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
+enableBullishSfp = input.bool(true, 'Enable Bullish SFP')
+enableBearishSfp = input.bool(true, 'Enable Bearish SFP')
 maxHoldHours = input.float(3.0, 'Max hold time (hours)', minval = 0.25, step = 0.25,
      tooltip = 'Closes any open position after this many hours from entry.')
 enableEodFlatten = input.bool(false, 'Enable 3:00 PM ET closeout',
@@ -105,8 +107,8 @@ if barstate.isconfirmed
 bullRaw = bullSweepAny
 
 // first time in cycle
-bearSfp = bearRaw and (na(bearRaw[1]) or not bearRaw[1])
-bullSfp = bullRaw and (na(bullRaw[1]) or not bullRaw[1])
+bearSfp = enableBearishSfp and bearRaw and (na(bearRaw[1]) or not bearRaw[1])
+bullSfp = enableBullishSfp and bullRaw and (na(bullRaw[1]) or not bullRaw[1])
 bullSfpPrevBar = bar_index > 0 and bullSfp[1]
 bearSfpPrevBar = bar_index > 0 and bearSfp[1]
 
