@@ -84,26 +84,36 @@ plot(currentSwingHigh ? high[1] : na, 'Swing high level', color = color.new(colo
 
 // Bearish SFP vs any stored swing high in window: wick above that high, close back below (only after pivot bar).
 var bool bearSweepAny = false
+var float bearSweepLevel = na
 bearSweepAny := false
+bearSweepLevel := na
 if barstate.isconfirmed
     nHigh = array.size(swingHighPrices)
     if nHigh > 0
         for i = 0 to nHigh - 1
             sh = array.get(swingHighPrices, i)
             shBar = array.get(swingHighBars, i)
-            bearSweepAny := bearSweepAny or (bar_index > shBar and high > sh and close < sh)
+            isBearSweep = bar_index > shBar and high > sh and close < sh
+            bearSweepAny := bearSweepAny or isBearSweep
+            if isBearSweep
+                bearSweepLevel := sh
 bearRaw = bearSweepAny
 
 // Bullish SFP vs any stored swing low in window.
 var bool bullSweepAny = false
+var float bullSweepLevel = na
 bullSweepAny := false
+bullSweepLevel := na
 if barstate.isconfirmed
     nLow = array.size(swingLowPrices)
     if nLow > 0
         for i = 0 to nLow - 1
             sl = array.get(swingLowPrices, i)
             slBar = array.get(swingLowBars, i)
-            bullSweepAny := bullSweepAny or (bar_index > slBar and low < sl and close > sl)
+            isBullSweep = bar_index > slBar and low < sl and close > sl
+            bullSweepAny := bullSweepAny or isBullSweep
+            if isBullSweep
+                bullSweepLevel := sl
 bullRaw = bullSweepAny
 
 // first time in cycle
@@ -164,6 +174,8 @@ if inDrawWindow
     log.info(logPrefix + 'bar_index=' + str.tostring(bar_index))
     log.info(logPrefix + 'bullSfp=' + str.tostring(bullSfp))
     log.info(logPrefix + 'bearSfp=' + str.tostring(bearSfp))
+    log.info(logPrefix + 'bullSweepLevel=' + str.tostring(bullSweepLevel))
+    log.info(logPrefix + 'bearSweepLevel=' + str.tostring(bearSweepLevel))
     log.info(logPrefix + 'bullSfpPrevBar=' + str.tostring(bullSfpPrevBar))
     log.info(logPrefix + 'bearSfpPrevBar=' + str.tostring(bearSfpPrevBar))
     log.info(logPrefix + 'canEnterSfpEt=' + str.tostring(canEnterSfpEt))
@@ -193,8 +205,10 @@ if timedExitNow or eodExitDue
     label.new(bar_index, high, 'EXIT\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.yellow, 0), textcolor = color.black, size = size.tiny)
 if submitBullEntry
     strategy.entry(nextBullEntryId, strategy.long, comment = 'Bull SFP Trade')
+    strategy.exit('Stop ' + nextBullEntryId, from_entry = nextBullEntryId, stop = bullSweepLevel, comment = 'Bull SFP stop')
 else if submitBearEntry
     strategy.entry(nextBearEntryId, strategy.short, comment = 'Bear SFP Trade')
+    strategy.exit('Stop ' + nextBearEntryId, from_entry = nextBearEntryId, stop = bearSweepLevel, comment = 'Bear SFP stop')
 
 if timedExitNow
     strategy.close_all(comment = 'Timed exit after 3 hours')
