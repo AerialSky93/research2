@@ -11,6 +11,8 @@ swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, s
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
 enableBullishSfp = input.bool(true, 'Enable Bullish SFP')
 enableBearishSfp = input.bool(true, 'Enable Bearish SFP')
+enableSfpStopLoss = input.bool(false, 'Enable SFP stop loss',
+     tooltip = 'Places a stop at the swing level that invalidates each SFP trade.')
 maxHoldHours = input.float(3.0, 'Max hold time (hours)', minval = 0.25, step = 0.25,
      tooltip = 'Closes any open position after this many hours from entry.')
 enableEodFlatten = input.bool(false, 'Enable 3:00 PM ET closeout',
@@ -205,10 +207,12 @@ if timedExitNow or eodExitDue
     label.new(bar_index, high, 'EXIT\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.abovebar, style = label.style_label_down, color = color.new(color.yellow, 0), textcolor = color.black, size = size.tiny)
 if submitBullEntry
     strategy.entry(nextBullEntryId, strategy.long, comment = 'Bull SFP Trade')
-    strategy.exit('Stop ' + nextBullEntryId, from_entry = nextBullEntryId, stop = bullSweepLevel, comment = 'Bull SFP stop')
+    if enableSfpStopLoss
+        strategy.exit('Stop ' + nextBullEntryId, from_entry = nextBullEntryId, stop = bullSweepLevel, comment = 'Bull SFP stop')
 else if submitBearEntry
     strategy.entry(nextBearEntryId, strategy.short, comment = 'Bear SFP Trade')
-    strategy.exit('Stop ' + nextBearEntryId, from_entry = nextBearEntryId, stop = bearSweepLevel, comment = 'Bear SFP stop')
+    if enableSfpStopLoss
+        strategy.exit('Stop ' + nextBearEntryId, from_entry = nextBearEntryId, stop = bearSweepLevel, comment = 'Bear SFP stop')
 
 if timedExitNow
     strategy.close_all(comment = 'Timed exit after 3 hours')
