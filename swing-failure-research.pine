@@ -4,6 +4,8 @@ strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay
      commission_type = strategy.commission.percent, commission_value = 0.0, pyramiding = 10,
      process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
+drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from',
+     tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long swing pivots stay in memory for SFP (hours converted to bars).')
 swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, step = 0.25,
@@ -17,8 +19,7 @@ maxHoldHours = input.float(3.0, 'Max hold time (hours)', minval = 0.25, step = 0
      tooltip = 'Closes any open position after this many hours from entry.')
 enableEodFlatten = input.bool(false, 'Enable 3:00 PM ET closeout',
      tooltip = 'When enabled, closes open positions during the 3:00 PM ET hour and blocks new entries in that window.')
-drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from',
-     tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
+
 historicalWindowDays = input.int(7, 'Historical window (days)', minval = 1, maxval = 365,
      tooltip = 'How many calendar days after "Draw lines from" are allowed for horizontal line creation.')
 enableDebugLogs = input.bool(true, 'Enable debug logs',
