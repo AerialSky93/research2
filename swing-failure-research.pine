@@ -4,8 +4,9 @@ strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay
      commission_type = strategy.commission.percent, commission_value = 0.0, pyramiding = 10,
      process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
-drawLinesFrom = input.time(timestamp('9 Dec 2025 00:00 +0000'), 'Draw lines from',
+drawLinesFrom = input.time(timestamp('15 Aug 2025 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
+
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long swing pivots stay in memory for SFP (hours converted to bars).')
 swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, step = 0.25,
@@ -181,10 +182,6 @@ if inDrawWindow
     log.info(logPrefix + 'bearSweepLevel=' + str.tostring(bearSweepLevel))
     log.info(logPrefix + 'bullSfpPrevBar=' + str.tostring(bullSfpPrevBar))
     log.info(logPrefix + 'bearSfpPrevBar=' + str.tostring(bearSfpPrevBar))
-    log.info(logPrefix + 'canEnterSfpEt=' + str.tostring(canEnterSfpEt))
-    log.info(logPrefix + 'session.ismarket=' + str.tostring(session.ismarket))
-    log.info(logPrefix + 'enableEodFlatten=' + str.tostring(enableEodFlatten))
-    log.info(logPrefix + 'inEodFlattenWindow=' + str.tostring(inEodFlattenWindow))
     log.info(logPrefix + 'strategy.position_size=' + str.tostring(strategy.position_size))
     log.info(logPrefix + 'submitBullEntry=' + str.tostring(submitBullEntry))
     log.info(logPrefix + 'submitBearEntry=' + str.tostring(submitBearEntry))
@@ -196,7 +193,6 @@ if inDrawWindow
     log.info(logPrefix + 'timedExitNow=' + str.tostring(timedExitNow))
     log.info(logPrefix + 'actualLongEntryBar=' + str.tostring(actualLongEntryBar))
     log.info(logPrefix + 'actualShortEntryBar=' + str.tostring(actualShortEntryBar))
-    log.info(logPrefix + 'process_orders_on_close=false')
 
 if actualLongEntryBar
     label.new(bar_index, low, 'BUY\n' + formatTimeEt(time), xloc = xloc.bar_index, yloc = yloc.belowbar, style = label.style_label_up, color = color.new(color.lime, 0), textcolor = color.white, size = size.tiny)
