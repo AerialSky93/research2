@@ -150,7 +150,7 @@ positionOpened = strategy.position_size != 0 and strategy.position_size[1] == 0
 positionReversed = strategy.position_size > 0 and strategy.position_size[1] < 0 or strategy.position_size < 0 and strategy.position_size[1] > 0
 positionAdded = math.abs(strategy.position_size) > math.abs(strategy.position_size[1]) and strategy.position_size * strategy.position_size[1] > 0
 
-if positionOpened or positionReversed or positionAdded
+if positionOpened or positionReversed
     positionEntryTime := time
 else if strategy.position_size == 0
     positionEntryTime := na
