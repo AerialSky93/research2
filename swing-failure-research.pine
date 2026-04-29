@@ -6,6 +6,8 @@ strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay
 
 drawLinesFrom = input.time(timestamp('15 Aug 2025 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
+minSwingSpacingBars = input.int(10, 'Minimum swing spacing (bars)', minval = 1,
+     tooltip = 'Minimum number of bars required between accepted swing highs and lows.')
 
 swingHistoryHours = input.float(24.0, 'Swing history (hours)', minval = 0.25, step = 0.25,
      tooltip = 'How long swing pivots stay in memory for SFP (hours converted to bars).')
@@ -41,9 +43,13 @@ visibleSwingLows = input.int(250, 'Max swing low lines', minval = 1, maxval = 25
      tooltip = 'Swing-low line segments drawn from selected start date.')
 var array<line> swingHighLines = array.new_line()
 var array<line> swingLowLines = array.new_line()
+var int lastAcceptedSwingPivotBar = na
 
 currentSwingLow = barstate.isconfirmed and low[1] < low[0] and low[1] < low[2]
 currentSwingHigh = barstate.isconfirmed and high[1] > high[0] and high[1] > high[2]
+candidatePivotBar = bar_index - 1
+currentSwingLow := currentSwingLow and (na(lastAcceptedSwingPivotBar) or candidatePivotBar - lastAcceptedSwingPivotBar >= minSwingSpacingBars)
+currentSwingHigh := currentSwingHigh and (na(lastAcceptedSwingPivotBar) or candidatePivotBar - lastAcceptedSwingPivotBar >= minSwingSpacingBars)
 
 // SFP memory only: drop old pivots by bar window.
 // swingHighBars[i] = confirmation bar index; pivot bar = that minus 1.
@@ -66,6 +72,7 @@ if currentSwingHigh
     highLineEnd = pivotTime + msToExtend
     array.push(swingHighPrices, pSh)
     array.push(swingHighBars, bar_index)
+    lastAcceptedSwingPivotBar := candidatePivotBar
     if pivotTime >= drawLinesFrom and pivotTime < drawLinesUntil
         array.push(swingHighLines, line.new(pivotTime, pSh, highLineEnd, pSh, xloc = xloc.bar_time, extend = extend.none, color = color.new(#E78F97, 0), width = swingPlotWidth))
         if array.size(swingHighLines) > visibleSwingHighs
@@ -76,6 +83,7 @@ if currentSwingLow
     lowLineEnd = pivotTime + msToExtend
     array.push(swingLowPrices, pSl)
     array.push(swingLowBars, bar_index)
+    lastAcceptedSwingPivotBar := candidatePivotBar
     if pivotTime >= drawLinesFrom and pivotTime < drawLinesUntil
         array.push(swingLowLines, line.new(pivotTime, pSl, lowLineEnd, pSl, xloc = xloc.bar_time, extend = extend.none, color = color.new(#73C8BA, 0), width = swingPlotWidth))
         if array.size(swingLowLines) > visibleSwingLows
