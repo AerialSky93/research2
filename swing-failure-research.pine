@@ -4,7 +4,7 @@ strategy('Swing pivots Wick Data Testing', 'SwingPivotsWickDataTesting', overlay
      commission_type = strategy.commission.percent, commission_value = 0.0, pyramiding = 10,
      process_orders_on_close = false, max_lines_count = 500, max_labels_count = 500)
 
-drawLinesFrom = input.time(timestamp('15 Aug 2025 00:00 +0000'), 'Draw lines from',
+drawLinesFrom = input.time(timestamp('25 Apr 2026 00:00 +0000'), 'Draw lines from',
      tooltip = 'Only pivots confirmed on or after this date will create horizontal lines.')
 minSwingSpacingBars = input.int(10, 'Minimum swing spacing (bars)', minval = 1,
      tooltip = 'Minimum number of bars required between accepted swing highs and lows.')
@@ -16,6 +16,8 @@ swingPlotHours = input.float(24.0, 'Swing plot length (hours)', minval = 0.25, s
 swingPlotWidth = input.int(2, 'Swing plot width', minval = 1, maxval = 5)
 enableBullishSfp = input.bool(true, 'Enable Bullish SFP')
 enableBearishSfp = input.bool(true, 'Enable Bearish SFP')
+isMarketParameter = input.bool(true, 'Require regular market hours',
+     tooltip = 'When enabled, entries are only allowed during the symbol regular session.')
 enableSfpStopLoss = input.bool(false, 'Enable SFP stop loss',
      tooltip = 'Places a stop at the swing level that invalidates each SFP trade.')
 maxHoldHours = input.float(3.0, 'Max hold time (hours)', minval = 0.25, step = 0.25,
@@ -147,6 +149,7 @@ formatTimeEt(ts) =>
 
 nyMinutes = hour(time, timezoneEt) * 60 + minute(time, timezoneEt)
 inEodFlattenWindow = nyMinutes >= 15 * 60 and nyMinutes < 16 * 60
+inMarketSession = session.ismarket
 dayKeyEt = year(time, timezoneEt) * 10000 + month(time, timezoneEt) * 100 + dayofmonth(time, timezoneEt)
 barDateTimeEt = str.tostring(year(time, timezoneEt)) + '-' + str.tostring(month(time, timezoneEt)) + '-' + str.tostring(dayofmonth(time, timezoneEt)) + ' ' + str.tostring(hour(time, timezoneEt)) + ':' + str.tostring(minute(time, timezoneEt))
 logPrefix = 'barDateTimeEt=' + barDateTimeEt + ' '
@@ -167,8 +170,8 @@ else if strategy.position_size == 0
 timedExitDue = strategy.position_size != 0 and not na(positionEntryTime) and time - positionEntryTime >= maxHoldMs
 eodExitDue = enableEodFlatten and inEodFlattenWindow and strategy.position_size != 0 and (na(eodFlattenedDayKey) or eodFlattenedDayKey != dayKeyEt)
 
-// Entries: reverse on opposite SFP (single `strategy.entry` id, pyramiding = 0). Only during regular session (`session.ismarket`).
-canEnterSfpEt = session.ismarket and (not enableEodFlatten or not inEodFlattenWindow)
+// Entries: reverse on opposite SFP. When `isMarket` is enabled, only allow entries during the regular session.
+canEnterSfpEt = (not isMarketParameter or inMarketSession) and (not enableEodFlatten or not inEodFlattenWindow)
 submitBullEntry = inDrawWindow and bullSfp and canEnterSfpEt
 submitBearEntry = inDrawWindow and bearSfp and canEnterSfpEt
 bullEntryBar = bar_index > 0 and inDrawWindow and inDrawWindow[1] and bullSfp[1] and canEnterSfpEt[1]
@@ -188,6 +191,8 @@ if inDrawWindow
     log.info(logPrefix + 'bearSfp=' + str.tostring(bearSfp))
     log.info(logPrefix + 'bullSweepLevel=' + str.tostring(bullSweepLevel))
     log.info(logPrefix + 'bearSweepLevel=' + str.tostring(bearSweepLevel))
+    log.info(logPrefix + 'isMarketParameter=' + str.tostring(isMarketParameter))
+    log.info(logPrefix + 'inMarketSession=' + str.tostring(inMarketSession))
     log.info(logPrefix + 'bullSfpPrevBar=' + str.tostring(bullSfpPrevBar))
     log.info(logPrefix + 'bearSfpPrevBar=' + str.tostring(bearSfpPrevBar))
     log.info(logPrefix + 'strategy.position_size=' + str.tostring(strategy.position_size))
