@@ -136,6 +136,14 @@ _isFtcActive=input(title="Full Time Frame Continuity Active?", type=input.bool, 
 // turn on and off debug label
 _isDebugLabelActive=input(title="Debug Label (Beta)", type=input.bool, defval=false)
 
+// backtest window
+_backtestStartYear=input(title="Backtest Start Year", type=input.integer, defval=2024)
+_backtestStartMonth=input(title="Backtest Start Month", type=input.integer, defval=1, minval=1, maxval=12)
+_backtestStartDay=input(title="Backtest Start Day", type=input.integer, defval=1, minval=1, maxval=31)
+_backtestEndYear=input(title="Backtest End Year", type=input.integer, defval=2099)
+_backtestEndMonth=input(title="Backtest End Month", type=input.integer, defval=12, minval=1, maxval=12)
+_backtestEndDay=input(title="Backtest End Day", type=input.integer, defval=31, minval=1, maxval=31)
+
 ///////////////////////////////////////////////
 // END: user input
 ///////////////////////////////////////////////
@@ -457,13 +465,17 @@ if _isDebugLabelActive
     label.delete(debugLabel[1])
 
 // trading logic at the end for readability
-enterLong = isFailedTwoDown and strategy.position_size <= 0
-enterShort = isFailedTwoUp and strategy.position_size >= 0
+_backtestStart = timestamp(_backtestStartYear, _backtestStartMonth, _backtestStartDay, 0, 0)
+_backtestEnd = timestamp(_backtestEndYear, _backtestEndMonth, _backtestEndDay, 23, 59)
+isInBacktestWindow = time >= _backtestStart and time <= _backtestEnd
+
+enterLong = isInBacktestWindow and isFailedTwoDown and strategy.position_size <= 0
+enterShort = isInBacktestWindow and isFailedTwoUp and strategy.position_size >= 0
 
 // When a position appears on this bar, it was filled at the bar open.
 // Closing it here schedules the exit for the next bar open.
-closeLong = strategy.position_size > 0 and strategy.position_size[1] <= 0
-closeShort = strategy.position_size < 0 and strategy.position_size[1] >= 0
+closeLong = (strategy.position_size > 0 and strategy.position_size[1] <= 0) or (strategy.position_size > 0 and not isInBacktestWindow)
+closeShort = (strategy.position_size < 0 and strategy.position_size[1] >= 0) or (strategy.position_size < 0 and not isInBacktestWindow)
 
 strategy.entry("Failed 2 Down Long", strategy.long, when=enterLong)
 strategy.entry("Failed 2 Up Short", strategy.short, when=enterShort)
