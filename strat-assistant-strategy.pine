@@ -471,7 +471,7 @@ enterShort = isInBacktestWindow and isFailedTwoUp and strategy.position_size >= 
 closeLong = (strategy.position_size > 0 and strategy.position_size[1] <= 0) or (strategy.position_size > 0 and not isInBacktestWindow)
 closeShort = (strategy.position_size < 0 and strategy.position_size[1] >= 0) or (strategy.position_size < 0 and not isInBacktestWindow)
 
-strategy.entry("Failed 2 Down Long", strategy.long, when=enterLong)
-strategy.entry("Failed 2 Up Short", strategy.short, when=enterShort)
-strategy.close("Failed 2 Down Long", when=closeLong)
-strategy.close("Failed 2 Up Short", when=closeShort)
+strategy.entry("Failed2Down Long", strategy.long, when=enterLong)
+strategy.entry("Failed2Up Short", strategy.short, when=enterShort)
+strategy.close("Failed2Down Long", when=closeLong)
+strategy.close("Failed2Up Short", when=closeShort)
