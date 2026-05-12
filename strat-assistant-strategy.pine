@@ -137,12 +137,8 @@ _isFtcActive=input(title="Full Time Frame Continuity Active?", type=input.bool, 
 _isDebugLabelActive=input(title="Debug Label (Beta)", type=input.bool, defval=false)
 
 // backtest window
-_backtestStartYear=input(title="Backtest Start Year", type=input.integer, defval=2024)
-_backtestStartMonth=input(title="Backtest Start Month", type=input.integer, defval=1, minval=1, maxval=12)
-_backtestStartDay=input(title="Backtest Start Day", type=input.integer, defval=1, minval=1, maxval=31)
-_backtestEndYear=input(title="Backtest End Year", type=input.integer, defval=2099)
-_backtestEndMonth=input(title="Backtest End Month", type=input.integer, defval=12, minval=1, maxval=12)
-_backtestEndDay=input(title="Backtest End Day", type=input.integer, defval=31, minval=1, maxval=31)
+_backtestStart=input(timestamp("01 Jan 2024 00:00 +0000"), title="Backtest Start", type=input.time)
+_backtestEnd=input(timestamp("31 Dec 2099 23:59 +0000"), title="Backtest End", type=input.time)
 
 ///////////////////////////////////////////////
 // END: user input
@@ -465,8 +461,6 @@ if _isDebugLabelActive
     label.delete(debugLabel[1])
 
 // trading logic at the end for readability
-_backtestStart = timestamp(_backtestStartYear, _backtestStartMonth, _backtestStartDay, 0, 0)
-_backtestEnd = timestamp(_backtestEndYear, _backtestEndMonth, _backtestEndDay, 23, 59)
 isInBacktestWindow = time >= _backtestStart and time <= _backtestEnd
 
 enterLong = isInBacktestWindow and isFailedTwoDown and strategy.position_size <= 0
