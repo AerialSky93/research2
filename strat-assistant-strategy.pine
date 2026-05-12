@@ -205,8 +205,8 @@ isHammer = open[0] > getHammerBottom and close[0] > getHammerBottom and not getI
 
 // FAILED 2 STRATEGY SIGNALS:
 // These are evaluated on the current bar and will fill on the next bar open.
-isFailedTwoDown = low < low[1] and close > low[1] and close > open
 isFailedTwoUp = high > high[1] and close < high[1] and close < open
+isFailedTwoDown = low < low[1] and close > low[1] and close > open
 
 // FULL TIME FRAME CONTINUITY CODE: 
 //reusable function for getting detail on the security
