@@ -462,9 +462,12 @@ if _isDebugLabelActive
 
 // trading logic at the end for readability
 isInBacktestWindow = time >= _backtestStart and time <= _backtestEnd
+ema9 = ema(close, 9)
+isEma9Rising = ema9 > ema9[8]
+isEma9Falling = ema9 < ema9[8]
 
-enterLong = isInBacktestWindow and isFailedTwoDown and strategy.position_size <= 0
-enterShort = isInBacktestWindow and isFailedTwoUp and strategy.position_size >= 0
+enterLong = isInBacktestWindow and isFailedTwoDown and isEma9Rising and strategy.position_size <= 0
+enterShort = isInBacktestWindow and isFailedTwoUp and isEma9Falling and strategy.position_size >= 0
 
 // When a position appears on this bar, it was filled at the bar open.
 // Closing it here schedules the exit for the next bar open.
