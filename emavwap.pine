@@ -10,20 +10,22 @@ ema9 = ta.ema(close, emaLength)
 isNewDay = timeframe.change("1D")
 [vwapValue, vwapUpperBand, vwapLowerBand] = ta.vwap(vwapSource, isNewDay, bandMultiplier)
 
-longSignal = close > ema9 and close > vwapValue and close[1] <= math.max(ema9[1], vwapValue[1])
+longSignal = low > ema9 and low > vwapValue and low[1] <= math.max(ema9[1], vwapValue[1])
 
 if longSignal and strategy.position_size == 0
     strategy.entry("Long", strategy.long)
 
 var int entryBarIndex = na
-
 newLongPosition = strategy.position_size > 0 and strategy.position_size[1] <= 0
 closedPosition = strategy.position_size == 0 and strategy.position_size[1] > 0
 
 if newLongPosition
     entryBarIndex := bar_index
 
-if strategy.position_size > 0 and not na(entryBarIndex) and bar_index - entryBarIndex >= holdBars
+maxHoldReached = strategy.position_size > 0 and not na(entryBarIndex) and bar_index - entryBarIndex >= holdBars
+exitSignal = strategy.position_size > 0 and (low < ema9 or low < vwapValue or maxHoldReached)
+
+if exitSignal
     strategy.close("Long")
 
 if closedPosition
@@ -31,7 +33,6 @@ if closedPosition
 
 plot(ema9, "EMA 9", color=color.orange, linewidth=2)
 plot(vwapValue, "VWAP", color=color.blue, linewidth=2)
-plot(vwapUpperBand, "VWAP Normal Upper Band", color=color.green)
-plot(vwapLowerBand, "VWAP Normal Lower Band", color=color.red)
+
 
 plotshape(longSignal, title="Buy Signal", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="BUY")
