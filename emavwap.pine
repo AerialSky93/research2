@@ -1,0 +1,38 @@
+//@version=5
+strategy("EMA9 and VWAP Trade", overlay=true, process_orders_on_close=true)
+
+emaLength = input.int(9, "EMA Length", minval=1)
+holdBars = input.int(2, "Bars To Hold", minval=1)
+bandMultiplier = input.float(1.0, "VWAP Normal Band Multiplier", minval=0.1, step=0.1)
+vwapSource = input.source(hlc3, "VWAP Source")
+
+ema9 = ta.ema(close, emaLength)
+isNewDay = timeframe.change("1D")
+[vwapValue, vwapUpperBand, vwapLowerBand] = ta.vwap(vwapSource, isNewDay, bandMultiplier)
+
+// Assumption: "normal band" means the first upper VWAP band.
+longSignal = close > ema9 and close > vwapUpperBand and close[1] <= math.max(ema9[1], vwapUpperBand[1])
+
+if longSignal and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+
+var int entryBarIndex = na
+
+newLongPosition = strategy.position_size > 0 and strategy.position_size[1] <= 0
+closedPosition = strategy.position_size == 0 and strategy.position_size[1] > 0
+
+if newLongPosition
+    entryBarIndex := bar_index
+
+if strategy.position_size > 0 and not na(entryBarIndex) and bar_index - entryBarIndex >= holdBars
+    strategy.close("Long")
+
+if closedPosition
+    entryBarIndex := na
+
+plot(ema9, "EMA 9", color=color.orange, linewidth=2)
+plot(vwapValue, "VWAP", color=color.blue, linewidth=2)
+plot(vwapUpperBand, "VWAP Normal Upper Band", color=color.green)
+plot(vwapLowerBand, "VWAP Normal Lower Band", color=color.red)
+
+plotshape(longSignal, title="Buy Signal", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="BUY")
