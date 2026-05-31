@@ -10,8 +10,7 @@ ema9 = ta.ema(close, emaLength)
 isNewDay = timeframe.change("1D")
 [vwapValue, vwapUpperBand, vwapLowerBand] = ta.vwap(vwapSource, isNewDay, bandMultiplier)
 
-// Assumption: "normal band" means the first upper VWAP band.
-longSignal = close > ema9 and close > vwapUpperBand and close[1] <= math.max(ema9[1], vwapUpperBand[1])
+longSignal = close > ema9 and close > vwapValue and close[1] <= math.max(ema9[1], vwapValue[1])
 
 if longSignal and strategy.position_size == 0
     strategy.entry("Long", strategy.long)
