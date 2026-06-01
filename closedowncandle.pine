@@ -1,0 +1,30 @@
+//@version=5
+strategy("Daily + 5 Minute Up Trend Strategy", overlay=true, process_orders_on_close=true)
+
+dailyTf = input.timeframe("D", "Higher Time Frame")
+lowerTf = input.timeframe("5", "Lower Time Frame")
+trendBars = input.int(2, "Bars To Check", minval=1)
+showBackground = input.bool(true, "Highlight When Both Are Up")
+
+dailyClose = request.security(syminfo.tickerid, dailyTf, close)
+lowerClose = request.security(syminfo.tickerid, lowerTf, close)
+
+dailyUp = ta.rising(dailyClose, trendBars)
+lowerUp = ta.rising(lowerClose, trendBars)
+bothUp = dailyUp and lowerUp
+enterLong = bothUp and not bothUp[1]
+exitLong = strategy.position_size > 0 and not bothUp
+
+if enterLong and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+
+if exitLong
+    strategy.close("Long")
+
+bgcolor(showBackground and bothUp ? color.new(color.green, 85) : na, title="Both Time Frames Up")
+
+plotshape(dailyUp, title="Daily Up", style=shape.circle, location=location.top, color=color.blue, size=size.tiny, text="D")
+plotshape(lowerUp, title="5 Minute Up", style=shape.circle, location=location.top, color=color.orange, size=size.tiny, text="5")
+plotshape(bothUp, title="Both Up", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="UP")
+plotshape(enterLong, title="Long Entry", style=shape.labelup, location=location.belowbar, color=color.green, size=size.small, text="BUY")
+plotshape(exitLong, title="Long Exit", style=shape.labeldown, location=location.abovebar, color=color.red, size=size.small, text="EXIT")

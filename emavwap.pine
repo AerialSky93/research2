@@ -10,7 +10,7 @@ ema9 = ta.ema(close, emaLength)
 isNewDay = timeframe.change("1D")
 [vwapValue, vwapUpperBand, vwapLowerBand] = ta.vwap(vwapSource, isNewDay, bandMultiplier)
 
-longSignal = low > ema9 and low > vwapValue and low[1] <= math.max(ema9[1], vwapValue[1])
+longSignal = close > ema9 and close > vwapValue and close[1] <= math.max(ema9[1], vwapValue[1])
 
 if longSignal and strategy.position_size == 0
     strategy.entry("Long", strategy.long)
@@ -23,7 +23,7 @@ if newLongPosition
     entryBarIndex := bar_index
 
 maxHoldReached = strategy.position_size > 0 and not na(entryBarIndex) and bar_index - entryBarIndex >= holdBars
-exitSignal = strategy.position_size > 0 and (low < ema9 or low < vwapValue or maxHoldReached)
+exitSignal = strategy.position_size > 0 and (close < ema9 or close < vwapValue or maxHoldReached)
 
 if exitSignal
     strategy.close("Long")
