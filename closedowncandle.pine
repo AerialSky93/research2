@@ -3,14 +3,15 @@ strategy("Daily + 5 Minute Up Trend Strategy", overlay=true, process_orders_on_c
 
 dailyTf = input.timeframe("D", "Higher Time Frame")
 lowerTf = input.timeframe("5", "Lower Time Frame")
-trendBars = input.int(2, "Bars To Check", minval=1)
+dailyTrendBars = 1
+lowerTrendBars = 2
 showBackground = input.bool(true, "Highlight When Both Are Up")
 
 dailyClose = request.security(syminfo.tickerid, dailyTf, close)
 lowerClose = request.security(syminfo.tickerid, lowerTf, close)
 
-dailyUp = ta.rising(dailyClose, trendBars)
-lowerUp = ta.rising(lowerClose, trendBars)
+dailyUp = ta.rising(dailyClose, dailyTrendBars)
+lowerUp = ta.rising(lowerClose, lowerTrendBars)
 bothUp = dailyUp and lowerUp
 enterLong = bothUp and not bothUp[1]
 exitLong = strategy.position_size > 0 and not bothUp
