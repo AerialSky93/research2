@@ -6,6 +6,8 @@ lowerTf = input.timeframe("5", "Lower Time Frame")
 dailyTrendBars = 1
 lowerTrendBars = 2
 showBackground = input.bool(true, "Highlight When Both Are Up")
+swingLeftBars = input.int(2, "Swing Left Bars", minval=1)
+swingRightBars = input.int(2, "Swing Right Bars", minval=1)
 
 dailyOpen = request.security(syminfo.tickerid, dailyTf, open)
 previousDailyClose = request.security(syminfo.tickerid, dailyTf, close[1])
@@ -19,6 +21,8 @@ lowerUp = ta.rising(lowerClose, lowerTrendBars)
 bothUp = isLowerTfChart and dailyUp and lowerUp
 enterLong = bothUp and not bothUp[1]
 exitLong = strategy.position_size > 0 and not bothUp
+swingHigh = ta.pivothigh(high, swingLeftBars, swingRightBars)
+swingLow = ta.pivotlow(low, swingLeftBars, swingRightBars)
 
 if enterLong and strategy.position_size == 0
     strategy.entry("Long", strategy.long)
@@ -33,3 +37,5 @@ plotshape(lowerUp, title="5 Minute Up", style=shape.circle, location=location.to
 plotshape(bothUp, title="Both Up", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="UP")
 plotshape(enterLong, title="Long Entry", style=shape.labelup, location=location.belowbar, color=color.green, size=size.small, text="BUY")
 plotshape(exitLong, title="Long Exit", style=shape.labeldown, location=location.abovebar, color=color.red, size=size.small, text="EXIT")
+plotshape(not na(swingHigh), title="Swing High", style=shape.triangledown, location=location.absolute, y=swingHigh, color=color.red, size=size.small, offset=-swingRightBars, text="SH")
+plotshape(not na(swingLow), title="Swing Low", style=shape.triangleup, location=location.absolute, y=swingLow, color=color.aqua, size=size.small, offset=-swingRightBars, text="SL")
