@@ -1,0 +1,39 @@
+//@version=5
+strategy("Swing Low Hold", overlay=true, process_orders_on_close=true)
+
+swingBars = input.int(3, "Swing Length", minval=1)
+holdBars = input.int(4, "Bars To Hold", minval=1)
+
+var float lastSwingLow = na
+var int lastSwingLowBar = na
+var int entryBarIndex = na
+
+pivotLow = ta.pivotlow(low, swingBars, swingBars)
+
+if not na(pivotLow)
+    lastSwingLow := pivotLow
+    lastSwingLowBar := bar_index - swingBars
+
+swingLowSignal = strategy.position_size == 0 and not na(pivotLow)
+
+if swingLowSignal
+    strategy.entry("Long", strategy.long)
+
+newLongPosition = strategy.position_size > 0 and strategy.position_size[1] <= 0
+closedPosition = strategy.position_size == 0 and strategy.position_size[1] > 0
+
+if newLongPosition
+    entryBarIndex := bar_index
+
+maxHoldReached = strategy.position_size > 0 and not na(entryBarIndex) and bar_index - entryBarIndex >= holdBars
+
+if maxHoldReached
+    strategy.close("Long")
+
+if closedPosition
+    entryBarIndex := na
+
+plot(lastSwingLow, "Last Swing Low", color=color.red, linewidth=2, style=plot.style_linebr)
+
+plotshape(not na(pivotLow), title="Swing Low", style=shape.circle, location=location.belowbar, offset=-swingBars, color=color.yellow, size=size.small, text="SL")
+plotshape(swingLowSignal, title="Long Entry", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="BUY")
