@@ -7,12 +7,16 @@ dailyTrendBars = 1
 lowerTrendBars = 2
 showBackground = input.bool(true, "Highlight When Both Are Up")
 
-dailyClose = request.security(syminfo.tickerid, dailyTf, close)
+dailyOpen = request.security(syminfo.tickerid, dailyTf, open)
+previousDailyClose = request.security(syminfo.tickerid, dailyTf, close[1])
 lowerClose = request.security(syminfo.tickerid, lowerTf, close)
+isLowerTfChart = timeframe.period == lowerTf
 
-dailyUp = ta.rising(dailyClose, dailyTrendBars)
+// Treat the daily trend as "today is trading above yesterday's close"
+// so it can update intraday on a 5 minute chart.
+dailyUp = close > previousDailyClose and close > dailyOpen
 lowerUp = ta.rising(lowerClose, lowerTrendBars)
-bothUp = dailyUp and lowerUp
+bothUp = isLowerTfChart and dailyUp and lowerUp
 enterLong = bothUp and not bothUp[1]
 exitLong = strategy.position_size > 0 and not bothUp
 
