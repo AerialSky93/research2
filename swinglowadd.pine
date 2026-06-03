@@ -4,8 +4,8 @@ strategy("Swing Low Hold", overlay=true, process_orders_on_close=true, pyramidin
 swingBars = input.int(3, "Swing Length", minval=1)
 holdBars = input.int(4, "Bars To Hold", minval=1)
 
-minutesChartInterval = timeframe.in_seconds(timeframe.period) / 60
-minutesTotalHold = holdBars * minutesChartInterval
+msChartInterval = timeframe.in_seconds(timeframe.period) * 1000
+msTotalHold = holdBars * msChartInterval
 
 type TrackedEntry
     string id
@@ -28,7 +28,8 @@ if swingLowSignal
     strategy.entry(entryId, strategy.long)
     array.push(openEntries, TrackedEntry.new(entryId, bar_index))
     entryStartTime = str.format_time(time_close, "yyyy-MM-dd h:mm a", "America/New_York")
-    alert("Swing Low Signal on " + syminfo.ticker + " at price " + str.tostring(close) + ". Planned entry: " + entryStartTime + " EST", alert.freq_once_per_bar_close)
+    timeCloseEstimate = str.format_time(time_close + msTotalHold, "yyyy-MM-dd h:mm a", "America/New_York")
+    alert("Swing Low Signal on " + syminfo.ticker + " at price " + str.tostring(close) + ". Planned entry: " + entryStartTime + " EST. Planned close: " + timeCloseEstimate + " EST", alert.freq_once_per_bar_close)
 
 
 if array.size(openEntries) > 0
