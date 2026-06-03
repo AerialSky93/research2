@@ -33,6 +33,5 @@ if array.size(openEntries) > 0
             array.remove(openEntries, i)
 
 plot(lastSwingLow, "Last Swing Low", color=color.red, linewidth=2, style=plot.style_linebr)
-
 plotshape(not na(pivotLow), title="Swing Low", style=shape.circle, location=location.belowbar, offset=-swingBars, color=color.yellow, size=size.small, text="SL")
 plotshape(swingLowSignal, title="Long Entry", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="BUY")
