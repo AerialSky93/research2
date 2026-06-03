@@ -4,6 +4,9 @@ strategy("Swing Low Hold", overlay=true, process_orders_on_close=true, pyramidin
 swingBars = input.int(3, "Swing Length", minval=1)
 holdBars = input.int(4, "Bars To Hold", minval=1)
 
+minutesChartInterval = timeframe.in_seconds(timeframe.period) / 60
+minutesTotalHold = holdBars * minutesChartInterval
+
 type TrackedEntry
     string id
     int barIndexEntry
