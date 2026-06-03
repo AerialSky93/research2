@@ -1,0 +1,40 @@
+//@version=5
+strategy("Swing Low Hold", overlay=true, process_orders_on_close=true, pyramiding=10)
+
+swingBars = input.int(3, "Swing Length", minval=1)
+holdBars = input.int(4, "Bars To Hold", minval=1)
+
+type TrackedEntry
+    string id
+    int barIndexEntry
+
+var float lastSwingLow = na
+var int lastSwingLowBar = na
+var int entryCount = 0
+var TrackedEntry[] openEntries = array.new<TrackedEntry>()
+
+pivotLow = ta.pivotlow(low, swingBars, swingBars)
+
+if not na(pivotLow)
+    lastSwingLow := pivotLow
+    lastSwingLowBar := bar_index - swingBars
+
+swingLowSignal = not na(pivotLow)
+
+if swingLowSignal
+    entryCount += 1
+    entryId = "Long_" + str.tostring(entryCount)
+    strategy.entry(entryId, strategy.long)
+    array.push(openEntries, TrackedEntry.new(entryId, bar_index))
+
+if array.size(openEntries) > 0
+    for i = array.size(openEntries) - 1 to 0
+        trackedEntry = array.get(openEntries, i)
+        if bar_index - trackedEntry.barIndexEntry >= holdBars
+            strategy.close(trackedEntry.id)
+            array.remove(openEntries, i)
+
+plot(lastSwingLow, "Last Swing Low", color=color.red, linewidth=2, style=plot.style_linebr)
+
+plotshape(not na(pivotLow), title="Swing Low", style=shape.circle, location=location.belowbar, offset=-swingBars, color=color.yellow, size=size.small, text="SL")
+plotshape(swingLowSignal, title="Long Entry", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="BUY")
