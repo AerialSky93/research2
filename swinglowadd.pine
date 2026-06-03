@@ -24,6 +24,8 @@ if swingLowSignal
     entryId = "Long_" + str.tostring(entryCount)
     strategy.entry(entryId, strategy.long)
     array.push(openEntries, TrackedEntry.new(entryId, bar_index))
+    alert("Swing Low Signal on " + syminfo.ticker + " at price " + str.tostring(close), alert.freq_once_per_bar_close)
+
 
 if array.size(openEntries) > 0
     for i = array.size(openEntries) - 1 to 0
