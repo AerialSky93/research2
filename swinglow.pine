@@ -5,14 +5,12 @@ swingBars = input.int(3, "Swing Length", minval=1)
 holdBars = input.int(4, "Bars To Hold", minval=1)
 
 var float lastSwingLow = na
-var int lastSwingLowBar = na
 var int entryBarIndex = na
 
 pivotLow = ta.pivotlow(low, swingBars, swingBars)
 
 if not na(pivotLow)
     lastSwingLow := pivotLow
-    lastSwingLowBar := bar_index - swingBars
 
 swingLowSignal = strategy.position_size == 0 and not na(pivotLow)
 

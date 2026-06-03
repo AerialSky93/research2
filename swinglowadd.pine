@@ -9,7 +9,6 @@ type TrackedEntry
     int barIndexEntry
 
 var float lastSwingLow = na
-var int lastSwingLowBar = na
 var int entryCount = 0
 var TrackedEntry[] openEntries = array.new<TrackedEntry>()
 
@@ -17,7 +16,6 @@ pivotLow = ta.pivotlow(low, swingBars, swingBars)
 
 if not na(pivotLow)
     lastSwingLow := pivotLow
-    lastSwingLowBar := bar_index - swingBars
 
 swingLowSignal = not na(pivotLow)
 
