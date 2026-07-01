@@ -64,6 +64,7 @@ var float max_bull_fvg = na, var float min_bull_fvg = na, var bull_count = 0, va
 var float max_bear_fvg = na, var float min_bear_fvg = na, var bear_count = 0, var bear_mitigated = 0
 var t = 0
 var int bull_entry_bar = na
+var bool bull_entry_pending = false
 
 var fvg_records = array.new<fvg>(0)
 var fvg_areas = array.new<box>(0)
@@ -85,14 +86,19 @@ if bull_fvg and new_fvg.t != t
     if strategy.position_size == 0
         strategy.entry("Bull FVG Long", strategy.long)
         bull_entry_bar := bar_index
+        bull_entry_pending := true
     t := new_fvg.t
 else if dynamic
     max_bull_fvg := math.max(math.min(close, max_bull_fvg), min_bull_fvg)
 
+if bull_entry_pending and strategy.position_size > 0
+    bull_entry_pending := false
+
 if strategy.position_size > 0 and not na(bull_entry_bar) and bar_index - bull_entry_bar >= 3
     strategy.close("Bull FVG Long")
     bull_entry_bar := na
-else if strategy.position_size == 0
+    bull_entry_pending := false
+else if strategy.position_size == 0 and not bull_entry_pending
     bull_entry_bar := na
 
 //Bear FVG's
