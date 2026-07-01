@@ -3,7 +3,7 @@
 // https://www.tradingview.com/script/jWY4Uiez-Fair-Value-Gap-LuxAlgo/
 
 //@version=5
-indicator("Fair Value Gap [LuxAlgo]", "LuxAlgo - Fair Value Gap", overlay = true, max_lines_count = 500, max_boxes_count = 500)
+strategy("Fair Value Gap Trade [LuxAlgo]", "LuxAlgo - Fair Value Gap Trade", overlay = true, max_lines_count = 500, max_boxes_count = 500)
 //------------------------------------------------------------------------------
 //Settings
 //-----------------------------------------------------------------------------{
@@ -63,6 +63,7 @@ detect()=>
 var float max_bull_fvg = na, var float min_bull_fvg = na, var bull_count = 0, var bull_mitigated = 0
 var float max_bear_fvg = na, var float min_bear_fvg = na, var bear_count = 0, var bear_mitigated = 0
 var t = 0
+var int bull_entry_bar = na
 
 var fvg_records = array.new<fvg>(0)
 var fvg_areas = array.new<box>(0)
@@ -81,9 +82,18 @@ if bull_fvg and new_fvg.t != t
     fvg_records.unshift(new_fvg)
 
     bull_count += 1
+    if strategy.position_size == 0
+        strategy.entry("Bull FVG Long", strategy.long)
+        bull_entry_bar := bar_index
     t := new_fvg.t
 else if dynamic
     max_bull_fvg := math.max(math.min(close, max_bull_fvg), min_bull_fvg)
+
+if strategy.position_size > 0 and not na(bull_entry_bar) and bar_index - bull_entry_bar >= 3
+    strategy.close("Bull FVG Long")
+    bull_entry_bar := na
+else if strategy.position_size == 0
+    bull_entry_bar := na
 
 //Bear FVG's
 if bear_fvg and new_fvg.t != t
