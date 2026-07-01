@@ -9,6 +9,7 @@ strategy("Fair Value Gap [LuxAlgo]", "LuxAlgo - Fair Value Gap Trade", overlay =
 thresholdPer = input.float(0, "Threshold %", minval = 0, maxval = 100, step = .1, inline = 'threshold')
 auto = input(false, "Auto", inline = 'threshold')
 exitBars = input.int(3, "Exit After Bars", minval = 1)
+maxLossPoints = input.float(4.0, "Max Loss Points", minval = 0, step = 0.25)
 
 showLast = input.int(0, 'Unmitigated Levels', minval = 0)
 mitigationLevels = input.bool(false, 'Mitigation Levels')
@@ -90,6 +91,9 @@ else if dynamic
 if new_bull_signal and strategy.position_size <= 0
     strategy.entry("Bull FVG Long", strategy.long)
     bull_entry_bar := bar_index
+
+if strategy.position_size > 0 and strategy.position_avg_price - close >= maxLossPoints
+    strategy.close("Bull FVG Long", comment = str.tostring(maxLossPoints) + "-point stop")
 
 if strategy.position_size > 0 and not na(bull_entry_bar) and bar_index - bull_entry_bar >= exitBars
     strategy.close("Bull FVG Long", comment = str.tostring(exitBars) + "-bar exit")
