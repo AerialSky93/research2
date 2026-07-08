@@ -1,0 +1,42 @@
+//@version=5
+strategy("MTF RSI Long/Short Strategy", overlay = true, pyramiding = 0, process_orders_on_close = true)
+
+rsiLength = input.int(14, "RSI Length", minval = 1)
+shortEntryLevel = input.float(80.0, "Short Entry RSI", step = 0.1)
+longEntryLevel = input.float(20.0, "Long Entry RSI", step = 0.1)
+exitLevel = input.float(50.0, "Exit RSI", step = 0.1)
+exitMode = input.string("Either timeframe", "Exit When", options = ["Either timeframe", "Both timeframes"])
+
+rsi1m = request.security(syminfo.tickerid, "1", ta.rsi(close, rsiLength))
+rsi5m = request.security(syminfo.tickerid, "5", ta.rsi(close, rsiLength))
+
+shortCondition = rsi1m > shortEntryLevel and rsi5m > shortEntryLevel
+longCondition = rsi1m < longEntryLevel and rsi5m < longEntryLevel
+
+shortExitEitherCondition = rsi1m <= exitLevel or rsi5m <= exitLevel
+shortExitBothCondition = rsi1m <= exitLevel and rsi5m <= exitLevel
+shortExitCondition = exitMode == "Either timeframe" ? shortExitEitherCondition : shortExitBothCondition
+
+longExitEitherCondition = rsi1m >= exitLevel or rsi5m >= exitLevel
+longExitBothCondition = rsi1m >= exitLevel and rsi5m >= exitLevel
+longExitCondition = exitMode == "Either timeframe" ? longExitEitherCondition : longExitBothCondition
+
+if shortCondition and strategy.position_size >= 0
+    strategy.entry("RSI Short", strategy.short)
+
+if longCondition and strategy.position_size <= 0
+    strategy.entry("RSI Long", strategy.long)
+
+if strategy.position_size < 0 and shortExitCondition
+    strategy.close("RSI Short")
+
+if strategy.position_size > 0 and longExitCondition
+    strategy.close("RSI Long")
+
+plot(rsi1m, "1m RSI", color = color.red, display = display.data_window)
+plot(rsi5m, "5m RSI", color = color.orange, display = display.data_window)
+
+alertcondition(shortCondition, "RSI Short Entry", "1m and 5m RSI are both above the short entry level.")
+alertcondition(longCondition, "RSI Long Entry", "1m and 5m RSI are both below the long entry level.")
+alertcondition(strategy.position_size < 0 and shortExitCondition, "RSI Short Exit", "RSI exit condition has been met for the open short.")
+alertcondition(strategy.position_size > 0 and longExitCondition, "RSI Long Exit", "RSI exit condition has been met for the open long.")
