@@ -2,7 +2,7 @@
 strategy("VRVP Buy/Sell 3-Bar Strategy", overlay = true, pyramiding = 0, process_orders_on_close = true)
 
 lookbackBars = input.int(2880, "Profile Lookback Bars", minval = 50)
-profileRows = input.int(24, "Profile Price Rows", minval = 5, maxval = 100)
+profileRows = input.int(150, "Profile Price Rows", minval = 5, maxval = 200)
 thresholdPct = input.float(60.0, "Buy/Sell Threshold %", minval = 50.0, maxval = 100.0, step = 0.1)
 holdBars = input.int(3, "Hold Bars", minval = 1)
 showBackground = input.bool(true, "Highlight Active Bias")

@@ -1,0 +1,683 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PerroGordo
+
+//@version=5
+indicator("VRVP Clone + Multi-POC v5 -- PerroGordo", overlay=true, max_boxes_count=500, max_lines_count=50, max_labels_count=100)
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// INPUTS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// --- Inputs Group ---
+string GRP_INPUTS = "Inputs"
+string i_rowsLayout = input.string("Number of Rows", "Rows Layout", options=["Number of Rows", "Ticks Per Row", "Points Per Row"], group=GRP_INPUTS, tooltip="Number of Rows: specify total rows. Ticks Per Row: price ticks (mintick units). Points Per Row: actual price points.")
+int i_rowSize = input.int(50, "Row Size", minval=1, maxval=500, group=GRP_INPUTS, tooltip="Number of display rows, ticks per row, or points per row depending on layout mode")
+string i_volumeMode = input.string("Up/Down", "Volume", options=["Up/Down", "Total", "Delta"], group=GRP_INPUTS, tooltip="Up/Down: split bars. Total: combined. Delta: net difference.")
+int i_vaPercent = input.int(70, "Value Area Volume %", minval=1, maxval=100, group=GRP_INPUTS, tooltip="Percentage of total volume to include in Value Area")
+string i_volDistribution = input.string("Typical Price Weighted", "Volume Distribution", options=["Uniform", "Typical Price Weighted", "Close Weighted"], group=GRP_INPUTS, tooltip="How to distribute a bar's volume across price levels. Typical Price uses (H+L+C)/3 as center.")
+
+// --- Style Group ---
+string GRP_STYLE = "Style"
+bool i_showProfile = input.bool(true, "Show Volume Profile", group=GRP_STYLE)
+int i_profileWidth = input.int(15, "Width (% of visible bars)", minval=5, maxval=50, group=GRP_STYLE, tooltip="Profile width as percentage of visible chart width")
+string i_placement = input.string("Right", "Placement", options=["Right", "Left"], group=GRP_STYLE)
+color i_upColor = input.color(#26a69a, "Up Volume Color", group=GRP_STYLE)
+color i_downColor = input.color(#787b86, "Down Volume Color", group=GRP_STYLE)
+color i_vaUpColor = input.color(color.new(#26a69a, 50), "Value Area Up Color", group=GRP_STYLE)
+color i_vaDownColor = input.color(color.new(#787b86, 50), "Value Area Down Color", group=GRP_STYLE)
+bool i_showVAH = input.bool(true, "Show VAH", inline="vah", group=GRP_STYLE)
+color i_vahColor = input.color(#26a69a, "", inline="vah", group=GRP_STYLE)
+string i_vahStyle = input.string("Dashed", "", options=["Solid", "Dashed", "Dotted"], inline="vah", group=GRP_STYLE)
+bool i_showVAL = input.bool(true, "Show VAL", inline="val", group=GRP_STYLE)
+color i_valColor = input.color(#26a69a, "", inline="val", group=GRP_STYLE)
+string i_valStyle = input.string("Dashed", "", options=["Solid", "Dashed", "Dotted"], inline="val", group=GRP_STYLE)
+bool i_showPOC = input.bool(true, "Show POC", inline="poc", group=GRP_STYLE)
+color i_pocColor = input.color(#ef5350, "", inline="poc", group=GRP_STYLE)
+string i_pocStyle = input.string("Dashed", "", options=["Solid", "Dashed", "Dotted"], inline="poc", group=GRP_STYLE)
+bool i_showPriceLabels = input.bool(true, "Labels on Price Scale", group=GRP_STYLE)
+
+// --- Multi POCs Group ---
+string GRP_ENHANCE = "Enhancements"
+int i_pocCount = input.int(1, "Number of POCs", minval=1, maxval=8, group=GRP_ENHANCE, tooltip="Show multiple POC lines at highest volume levels")
+string i_pocMode = input.string("Volume Nodes", "POC Mode", options=["Highest Rows", "Volume Nodes"], group=GRP_ENHANCE, tooltip="Highest Rows: top N rows by volume. Volume Nodes: finds local peaks with separation between clusters.")
+int i_minNodeSep = input.int(0, "Min Node Separation", minval=0, maxval=50, group=GRP_ENHANCE, tooltip="Minimum rows between POC nodes. 0 = auto-calculate based on row count and POC count.")
+color i_poc2Color = input.color(#ff9800, "POC 2 Color", group=GRP_ENHANCE)
+color i_poc3Color = input.color(#ffeb3b, "POC 3 Color", group=GRP_ENHANCE)
+color i_poc4Color = input.color(#9c27b0, "POC 4 Color", group=GRP_ENHANCE)
+color i_poc5Color = input.color(#00bcd4, "POC 5 Color", group=GRP_ENHANCE)
+color i_poc6Color = input.color(#e91e63, "POC 6 Color", group=GRP_ENHANCE)
+color i_poc7Color = input.color(#8bc34a, "POC 7 Color", group=GRP_ENHANCE)
+color i_poc8Color = input.color(#607d8b, "POC 8 Color", group=GRP_ENHANCE)
+string i_poc234Style = input.string("Dotted", "Secondary POC Style", options=["Solid", "Dashed", "Dotted"], group=GRP_ENHANCE)
+bool i_showPocLabels = input.bool(false, "Show POC Labels on Chart", group=GRP_ENHANCE, tooltip="Display price labels next to POC lines")
+string i_pocLabelSize = input.string("Small", "POC Label Size", options=["Tiny", "Small", "Normal"], group=GRP_ENHANCE)
+bool i_deltaIntensity = input.bool(false, "Delta Intensity Mode", group=GRP_ENHANCE, tooltip="Color rows by buyer/seller dominance instead of split bars")
+color i_deltaBullColor = input.color(#26a69a, "Bullish Intensity Color", group=GRP_ENHANCE)
+color i_deltaBearColor = input.color(#ef5350, "Bearish Intensity Color", group=GRP_ENHANCE)
+bool i_showStats = input.bool(false, "Show Stats Table", group=GRP_ENHANCE)
+string i_tablePosition = input.string("Top Right", "Table Position", options=["Top Left", "Top Right", "Bottom Left", "Bottom Right"], group=GRP_ENHANCE)
+string i_tableSize = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal"], group=GRP_ENHANCE)
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// CONSTANTS & HELPER FUNCTIONS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Internal resolution - use many more rows for accuracy, then aggregate for display
+int INTERNAL_ROWS = 400
+
+// Convert string to line style
+f_getLineStyle(string styleStr) =>
+    switch styleStr
+        "Solid" => line.style_solid
+        "Dashed" => line.style_dashed
+        "Dotted" => line.style_dotted
+        => line.style_dashed
+
+// Convert string to label size
+f_getLabelSize(string sizeStr) =>
+    switch sizeStr
+        "Tiny" => size.tiny
+        "Small" => size.small
+        "Normal" => size.normal
+        => size.small
+
+// Convert string to table position
+f_getTablePosition(string posStr) =>
+    switch posStr
+        "Top Left" => position.top_left
+        "Top Right" => position.top_right
+        "Bottom Left" => position.bottom_left
+        "Bottom Right" => position.bottom_right
+        => position.top_right
+
+// Convert string to table size
+f_getTableSize(string sizeStr) =>
+    switch sizeStr
+        "Tiny" => size.tiny
+        "Small" => size.small
+        "Normal" => size.normal
+        => size.small
+
+// Format large numbers with K/M suffix
+f_formatVolume(float vol) =>
+    string result = ""
+    if vol >= 1000000000
+        result := str.tostring(vol / 1000000000, "#.##") + "B"
+    else if vol >= 1000000
+        result := str.tostring(vol / 1000000, "#.##") + "M"
+    else if vol >= 1000
+        result := str.tostring(vol / 1000, "#.##") + "K"
+    else
+        result := str.tostring(vol, "#.##")
+    result
+
+// Gaussian-like weight function (simplified triangle distribution)
+f_triangleWeight(float price, float center, float halfWidth) =>
+    if halfWidth <= 0
+        1.0
+    else
+        float distance = math.abs(price - center)
+        math.max(0.0, 1.0 - (distance / halfWidth))
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// VISIBLE RANGE DETECTION
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+int leftTime = chart.left_visible_bar_time
+int rightTime = chart.right_visible_bar_time
+
+bool isVisible = time >= leftTime and time <= rightTime
+
+var int visibleBarCount = 0
+var int leftBarIndex = 0
+var int rightBarIndex = 0
+
+if time == leftTime
+    leftBarIndex := bar_index
+    visibleBarCount := 0
+
+if isVisible
+    visibleBarCount += 1
+    rightBarIndex := bar_index
+
+var float visibleHigh = na
+var float visibleLow = na
+
+if time == leftTime
+    visibleHigh := high
+    visibleLow := low
+else if isVisible
+    visibleHigh := math.max(nz(visibleHigh, high), high)
+    visibleLow := math.min(nz(visibleLow, low), low)
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// ROW CALCULATION
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Display rows (what user sees)
+int displayRowCount = i_rowSize
+float priceRange = nz(visibleHigh - visibleLow, 0)
+
+if i_rowsLayout == "Ticks Per Row" and priceRange > 0
+    float tickSize = syminfo.mintick
+    displayRowCount := math.max(1, math.round(priceRange / (tickSize * i_rowSize)))
+else if i_rowsLayout == "Points Per Row" and priceRange > 0
+    // Points directly - this likely matches TradingView's interpretation
+    displayRowCount := math.max(1, math.round(priceRange / i_rowSize))
+
+displayRowCount := math.min(displayRowCount, 200)
+
+// Internal rows (finer resolution for accuracy)
+int internalRowCount = INTERNAL_ROWS
+
+// Calculate row heights
+float displayRowHeight = priceRange > 0 ? priceRange / displayRowCount : 0
+float internalRowHeight = priceRange > 0 ? priceRange / internalRowCount : 0
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// VOLUME ARRAYS & ACCUMULATION (Internal Fine Resolution)
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+var float[] intUpVol = array.new_float(INTERNAL_ROWS, 0.0)
+var float[] intDownVol = array.new_float(INTERNAL_ROWS, 0.0)
+var float[] intTotalVol = array.new_float(INTERNAL_ROWS, 0.0)
+
+var float rawVolumeSum = 0.0
+
+// Reset arrays when we hit the left visible bar
+if time == leftTime
+    for i = 0 to INTERNAL_ROWS - 1
+        array.set(intUpVol, i, 0.0)
+        array.set(intDownVol, i, 0.0)
+        array.set(intTotalVol, i, 0.0)
+    rawVolumeSum := 0.0
+
+// Distribute this bar's volume using selected method
+if isVisible and internalRowHeight > 0 and not na(visibleLow)
+    float barHigh = high
+    float barLow = low
+    float barRange = barHigh - barLow
+    float barVol = volume
+    bool isUpBar = close >= open
+    
+    rawVolumeSum += barVol
+    
+    // Calculate volume center based on distribution method
+    float volCenter = switch i_volDistribution
+        "Typical Price Weighted" => (high + low + close) / 3
+        "Close Weighted" => close
+        => (high + low) / 2  // Uniform uses midpoint
+    
+    // For weighted distributions, use half the bar range as the spread
+    float halfSpread = barRange / 2
+    
+    if barRange < syminfo.mintick
+        // Doji - all volume to single row
+        int targetRow = int(math.floor((close - visibleLow) / internalRowHeight))
+        targetRow := math.max(0, math.min(targetRow, internalRowCount - 1))
+        
+        if isUpBar
+            array.set(intUpVol, targetRow, array.get(intUpVol, targetRow) + barVol)
+        else
+            array.set(intDownVol, targetRow, array.get(intDownVol, targetRow) + barVol)
+        array.set(intTotalVol, targetRow, array.get(intTotalVol, targetRow) + barVol)
+    else
+        // Distribute volume across rows the bar touches
+        float totalWeight = 0.0
+        var float[] rowWeights = array.new_float(INTERNAL_ROWS, 0.0)
+        
+        // First pass: calculate weights for all touched rows
+        for i = 0 to internalRowCount - 1
+            float rowBottom = visibleLow + (i * internalRowHeight)
+            float rowTop = rowBottom + internalRowHeight
+            float rowMid = (rowBottom + rowTop) / 2
+            
+            // Check if bar intersects this row
+            if barHigh >= rowBottom and barLow <= rowTop
+                float weight = 0.0
+                
+                if i_volDistribution == "Uniform"
+                    // Uniform: weight by overlap
+                    float overlapTop = math.min(barHigh, rowTop)
+                    float overlapBottom = math.max(barLow, rowBottom)
+                    float overlapRange = overlapTop - overlapBottom
+                    weight := overlapRange > 0 ? overlapRange / barRange : 0.0
+                else
+                    // Weighted: use triangle distribution centered on volCenter
+                    weight := f_triangleWeight(rowMid, volCenter, halfSpread)
+                    // Still need to check actual overlap
+                    float overlapTop = math.min(barHigh, rowTop)
+                    float overlapBottom = math.max(barLow, rowBottom)
+                    if overlapTop <= overlapBottom
+                        weight := 0.0
+                
+                array.set(rowWeights, i, weight)
+                totalWeight += weight
+        
+        // Second pass: distribute volume proportionally
+        if totalWeight > 0
+            for i = 0 to internalRowCount - 1
+                float weight = array.get(rowWeights, i)
+                if weight > 0
+                    float volContrib = barVol * (weight / totalWeight)
+                    
+                    if isUpBar
+                        array.set(intUpVol, i, array.get(intUpVol, i) + volContrib)
+                    else
+                        array.set(intDownVol, i, array.get(intDownVol, i) + volContrib)
+                    array.set(intTotalVol, i, array.get(intTotalVol, i) + volContrib)
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// AGGREGATE TO DISPLAY ROWS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+var float[] rowUpVol = array.new_float(200, 0.0)
+var float[] rowDownVol = array.new_float(200, 0.0)
+var float[] rowTotalVol = array.new_float(200, 0.0)
+
+// Aggregate internal rows to display rows at the end
+if time == chart.right_visible_bar_time and internalRowHeight > 0 and displayRowHeight > 0
+    // Clear display arrays
+    for i = 0 to 199
+        array.set(rowUpVol, i, 0.0)
+        array.set(rowDownVol, i, 0.0)
+        array.set(rowTotalVol, i, 0.0)
+    
+    // Map each internal row to its display row
+    for i = 0 to internalRowCount - 1
+        float internalRowMid = visibleLow + (i * internalRowHeight) + (internalRowHeight / 2)
+        int displayIdx = int(math.floor((internalRowMid - visibleLow) / displayRowHeight))
+        displayIdx := math.max(0, math.min(displayIdx, displayRowCount - 1))
+        
+        array.set(rowUpVol, displayIdx, array.get(rowUpVol, displayIdx) + array.get(intUpVol, i))
+        array.set(rowDownVol, displayIdx, array.get(rowDownVol, displayIdx) + array.get(intDownVol, i))
+        array.set(rowTotalVol, displayIdx, array.get(rowTotalVol, displayIdx) + array.get(intTotalVol, i))
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// POC & VALUE AREA CALCULATIONS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+var int pocIndex = 0
+var float pocPrice = na
+var int[] topPocIndices = array.new_int(8, 0)
+var float[] topPocPrices = array.new_float(8, na)
+var float vahPrice = na
+var float valPrice = na
+var int vahIndex = 0
+var int valIndex = 0
+var float totalVolume = 0.0
+var float totalUpVolume = 0.0
+var float totalDownVolume = 0.0
+
+if time == chart.right_visible_bar_time and displayRowHeight > 0
+    float maxVol = 0.0
+    totalVolume := 0.0
+    totalUpVolume := 0.0
+    totalDownVolume := 0.0
+    
+    var int[] sortedIndices = array.new_int(0)
+    var float[] sortedVolumes = array.new_float(0)
+    array.clear(sortedIndices)
+    array.clear(sortedVolumes)
+    
+    for i = 0 to displayRowCount - 1
+        float vol = array.get(rowTotalVol, i)
+        float upVol = array.get(rowUpVol, i)
+        float downVol = array.get(rowDownVol, i)
+        
+        totalVolume += vol
+        totalUpVolume += upVol
+        totalDownVolume += downVol
+        
+        array.push(sortedIndices, i)
+        array.push(sortedVolumes, vol)
+        
+        if vol > maxVol
+            maxVol := vol
+            pocIndex := i
+    
+    int minSep = i_minNodeSep > 0 ? i_minNodeSep : math.max(2, math.round(displayRowCount / (i_pocCount * 2)))
+    
+    if i_pocMode == "Highest Rows"
+        for rank = 0 to math.min(7, displayRowCount - 1)
+            int maxIdx = rank
+            float maxV = array.get(sortedVolumes, rank)
+            
+            for j = rank + 1 to array.size(sortedVolumes) - 1
+                if array.get(sortedVolumes, j) > maxV
+                    maxV := array.get(sortedVolumes, j)
+                    maxIdx := j
+            
+            if maxIdx != rank
+                float tempVol = array.get(sortedVolumes, rank)
+                int tempIdx = array.get(sortedIndices, rank)
+                array.set(sortedVolumes, rank, array.get(sortedVolumes, maxIdx))
+                array.set(sortedIndices, rank, array.get(sortedIndices, maxIdx))
+                array.set(sortedVolumes, maxIdx, tempVol)
+                array.set(sortedIndices, maxIdx, tempIdx)
+            
+            int rowIdx = array.get(sortedIndices, rank)
+            array.set(topPocIndices, rank, rowIdx)
+            float price = visibleLow + (rowIdx * displayRowHeight) + (displayRowHeight / 2)
+            array.set(topPocPrices, rank, price)
+    else
+        // Volume Nodes mode
+        var int[] peakIndices = array.new_int(0)
+        var float[] peakVolumes = array.new_float(0)
+        array.clear(peakIndices)
+        array.clear(peakVolumes)
+        
+        for i = 0 to displayRowCount - 1
+            float currVol = array.get(rowTotalVol, i)
+            float prevVol = i > 0 ? array.get(rowTotalVol, i - 1) : 0.0
+            float nextVol = i < displayRowCount - 1 ? array.get(rowTotalVol, i + 1) : 0.0
+            
+            bool isPeak = false
+            if i == 0
+                isPeak := currVol > nextVol
+            else if i == displayRowCount - 1
+                isPeak := currVol > prevVol
+            else
+                isPeak := currVol >= prevVol and currVol >= nextVol and (currVol > prevVol or currVol > nextVol)
+            
+            if isPeak and currVol > 0
+                array.push(peakIndices, i)
+                array.push(peakVolumes, currVol)
+        
+        int numPeaks = array.size(peakIndices)
+        if numPeaks > 1
+            for rank = 0 to numPeaks - 2
+                int maxIdx = rank
+                float maxV = array.get(peakVolumes, rank)
+                
+                for j = rank + 1 to numPeaks - 1
+                    if array.get(peakVolumes, j) > maxV
+                        maxV := array.get(peakVolumes, j)
+                        maxIdx := j
+                
+                if maxIdx != rank
+                    float tempVol = array.get(peakVolumes, rank)
+                    int tempIdx = array.get(peakIndices, rank)
+                    array.set(peakVolumes, rank, array.get(peakVolumes, maxIdx))
+                    array.set(peakIndices, rank, array.get(peakIndices, maxIdx))
+                    array.set(peakVolumes, maxIdx, tempVol)
+                    array.set(peakIndices, maxIdx, tempIdx)
+        
+        var int[] selectedIndices = array.new_int(0)
+        array.clear(selectedIndices)
+        
+        if numPeaks > 0
+            for i = 0 to numPeaks - 1
+                if array.size(selectedIndices) >= 8
+                    break
+                
+                int candidateIdx = array.get(peakIndices, i)
+                bool tooClose = false
+                
+                int numSel = array.size(selectedIndices)
+                if numSel > 0
+                    for j = 0 to numSel - 1
+                        int selectedIdx = array.get(selectedIndices, j)
+                        if math.abs(candidateIdx - selectedIdx) < minSep
+                            tooClose := true
+                            break
+                
+                if not tooClose
+                    array.push(selectedIndices, candidateIdx)
+        
+        int numSelected = array.size(selectedIndices)
+        var float[] selectedVolumes = array.new_float(0)
+        array.clear(selectedVolumes)
+        
+        for i = 0 to math.max(0, numSelected - 1)
+            if i < numSelected
+                int idx = array.get(selectedIndices, i)
+                array.push(selectedVolumes, array.get(rowTotalVol, idx))
+        
+        if numSelected > 1
+            int sortLimit = math.min(numSelected - 2, 6)
+            for rank = 0 to sortLimit
+                int maxIdx = rank
+                float maxV = array.get(selectedVolumes, rank)
+                
+                for j = rank + 1 to numSelected - 1
+                    if array.get(selectedVolumes, j) > maxV
+                        maxV := array.get(selectedVolumes, j)
+                        maxIdx := j
+                
+                if maxIdx != rank
+                    float tempVol = array.get(selectedVolumes, rank)
+                    int tempIdx = array.get(selectedIndices, rank)
+                    array.set(selectedVolumes, rank, array.get(selectedVolumes, maxIdx))
+                    array.set(selectedIndices, rank, array.get(selectedIndices, maxIdx))
+                    array.set(selectedVolumes, maxIdx, tempVol)
+                    array.set(selectedIndices, maxIdx, tempIdx)
+        
+        if numSelected > 0
+            for rank = 0 to math.min(7, numSelected - 1)
+                int rowIdx = array.get(selectedIndices, rank)
+                array.set(topPocIndices, rank, rowIdx)
+                float price = visibleLow + (rowIdx * displayRowHeight) + (displayRowHeight / 2)
+                array.set(topPocPrices, rank, price)
+        
+        // FIX: Only clear remaining slots if there are slots to clear
+        int startClear = math.max(0, numSelected)
+        if startClear < 8
+            for rank = startClear to 7
+                array.set(topPocIndices, rank, 0)
+                array.set(topPocPrices, rank, na)
+    
+    pocPrice := array.get(topPocPrices, 0)
+    pocIndex := array.get(topPocIndices, 0)
+    
+    // Calculate Value Area
+    float targetVol = totalVolume * (i_vaPercent / 100.0)
+    float accumulatedVol = array.get(rowTotalVol, pocIndex)
+    vahIndex := pocIndex
+    valIndex := pocIndex
+    
+    while accumulatedVol < targetVol
+        float volAbove = vahIndex < displayRowCount - 1 ? array.get(rowTotalVol, vahIndex + 1) : 0.0
+        float volBelow = valIndex > 0 ? array.get(rowTotalVol, valIndex - 1) : 0.0
+        
+        if volAbove == 0 and volBelow == 0
+            break
+        
+        if volAbove >= volBelow and vahIndex < displayRowCount - 1
+            vahIndex += 1
+            accumulatedVol += volAbove
+        else if valIndex > 0
+            valIndex -= 1
+            accumulatedVol += volBelow
+        else
+            break
+    
+    vahPrice := visibleLow + ((vahIndex + 1) * displayRowHeight)
+    valPrice := visibleLow + (valIndex * displayRowHeight)
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// DRAWING ARRAYS
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+var box[] profileBoxes = array.new_box()
+var line[] levelLines = array.new_line()
+var label[] priceLabels = array.new_label()
+var table statsTable = na
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// RENDER PROFILE
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+if time == chart.right_visible_bar_time and i_showProfile and displayRowHeight > 0
+    while array.size(profileBoxes) > 0
+        box.delete(array.pop(profileBoxes))
+    
+    while array.size(levelLines) > 0
+        line.delete(array.pop(levelLines))
+    
+    while array.size(priceLabels) > 0
+        label.delete(array.pop(priceLabels))
+    
+    if not na(statsTable)
+        table.delete(statsTable)
+    
+    float maxRowVol = 0.0
+    for i = 0 to displayRowCount - 1
+        maxRowVol := math.max(maxRowVol, array.get(rowTotalVol, i))
+    
+    int profileWidthBars = math.max(10, math.round(visibleBarCount * i_profileWidth / 100))
+    
+    // Anchor to the rightmost visible bar - profile extends left from here
+    // This keeps the profile dynamic and moves with scrolling
+    int anchorBar = bar_index
+    
+    int profileRight = i_placement == "Right" ? anchorBar : leftBarIndex + profileWidthBars
+    int profileLeft = i_placement == "Right" ? anchorBar - profileWidthBars : leftBarIndex
+    
+    for i = 0 to displayRowCount - 1
+        float rowBottom = visibleLow + (i * displayRowHeight)
+        float rowTop = rowBottom + displayRowHeight
+        float rowVol = array.get(rowTotalVol, i)
+        float upVol = array.get(rowUpVol, i)
+        float downVol = array.get(rowDownVol, i)
+        
+        if rowVol > 0 and maxRowVol > 0
+            bool inVA = i >= valIndex and i <= vahIndex
+            float volRatio = rowVol / maxRowVol
+            int barWidth = math.round(profileWidthBars * volRatio)
+            
+            if i_deltaIntensity
+                float deltaRatio = (upVol - downVol) / rowVol
+                color barColor = na
+                
+                if deltaRatio >= 0
+                    int transp = math.round((1 - deltaRatio) * 70)
+                    barColor := color.new(i_deltaBullColor, transp)
+                else
+                    int transp = math.round((1 - math.abs(deltaRatio)) * 70)
+                    barColor := color.new(i_deltaBearColor, transp)
+                
+                if i_placement == "Right"
+                    array.push(profileBoxes, box.new(profileRight - barWidth, rowTop, profileRight, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+                else
+                    array.push(profileBoxes, box.new(profileLeft, rowTop, profileLeft + barWidth, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+            
+            else if i_volumeMode == "Up/Down"
+                float upRatio = upVol / maxRowVol
+                float downRatio = downVol / maxRowVol
+                int upWidth = math.round(profileWidthBars * upRatio)
+                int downWidth = math.round(profileWidthBars * downRatio)
+                
+                color upColor = inVA ? i_vaUpColor : i_upColor
+                color downColor = inVA ? i_vaDownColor : i_downColor
+                color borderCol = color.black
+                
+                if i_placement == "Right"
+                    if upWidth > 0
+                        array.push(profileBoxes, box.new(profileRight - upWidth, rowTop, profileRight, rowBottom, border_color=borderCol, border_width=1, bgcolor=upColor))
+                    if downWidth > 0
+                        array.push(profileBoxes, box.new(profileRight - upWidth - downWidth, rowTop, profileRight - upWidth, rowBottom, border_color=borderCol, border_width=1, bgcolor=downColor))
+                else
+                    if upWidth > 0
+                        array.push(profileBoxes, box.new(profileLeft, rowTop, profileLeft + upWidth, rowBottom, border_color=borderCol, border_width=1, bgcolor=upColor))
+                    if downWidth > 0
+                        array.push(profileBoxes, box.new(profileLeft + upWidth, rowTop, profileLeft + upWidth + downWidth, rowBottom, border_color=borderCol, border_width=1, bgcolor=downColor))
+            
+            else if i_volumeMode == "Total"
+                color barColor = upVol >= downVol ? (inVA ? i_vaUpColor : i_upColor) : (inVA ? i_vaDownColor : i_downColor)
+                
+                if i_placement == "Right"
+                    array.push(profileBoxes, box.new(profileRight - barWidth, rowTop, profileRight, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+                else
+                    array.push(profileBoxes, box.new(profileLeft, rowTop, profileLeft + barWidth, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+            
+            else if i_volumeMode == "Delta"
+                float delta = upVol - downVol
+                float absDelta = math.abs(delta)
+                float deltaRatioAbs = absDelta / maxRowVol
+                int deltaWidth = math.round(profileWidthBars * deltaRatioAbs)
+                color barColor = delta >= 0 ? (inVA ? i_vaUpColor : i_upColor) : (inVA ? i_vaDownColor : i_downColor)
+                
+                if i_placement == "Right"
+                    array.push(profileBoxes, box.new(profileRight - deltaWidth, rowTop, profileRight, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+                else
+                    array.push(profileBoxes, box.new(profileLeft, rowTop, profileLeft + deltaWidth, rowBottom, border_color=color.new(barColor, 50), bgcolor=barColor))
+    
+    // Draw POC lines
+    int lineLeft = leftBarIndex
+    int lineRight = anchorBar
+    
+    for rank = 0 to i_pocCount - 1
+        float price = array.get(topPocPrices, rank)
+        if not na(price)
+            color lineColor = switch rank
+                0 => i_pocColor
+                1 => i_poc2Color
+                2 => i_poc3Color
+                3 => i_poc4Color
+                4 => i_poc5Color
+                5 => i_poc6Color
+                6 => i_poc7Color
+                7 => i_poc8Color
+                => i_pocColor
+            
+            string styleStr = rank == 0 ? i_pocStyle : i_poc234Style
+            bool showThis = rank == 0 ? i_showPOC : true
+            
+            if showThis
+                array.push(levelLines, line.new(lineLeft, price, lineRight, price, color=lineColor, style=f_getLineStyle(styleStr), width=1))
+                
+                if i_showPocLabels
+                    string labelText = rank == 0 ? "POC " : "POC" + str.tostring(rank + 1) + " "
+                    labelText += str.tostring(price, format.mintick)
+                    if i_placement == "Right"
+                        array.push(priceLabels, label.new(profileRight - profileWidthBars - 2, price, labelText, style=label.style_label_right, color=lineColor, textcolor=color.white, size=f_getLabelSize(i_pocLabelSize)))
+                    else
+                        array.push(priceLabels, label.new(profileLeft + profileWidthBars + 2, price, labelText, style=label.style_label_left, color=lineColor, textcolor=color.white, size=f_getLabelSize(i_pocLabelSize)))
+    
+    if i_showVAH and not na(vahPrice)
+        array.push(levelLines, line.new(lineLeft, vahPrice, lineRight, vahPrice, color=i_vahColor, style=f_getLineStyle(i_vahStyle), width=1))
+    
+    if i_showVAL and not na(valPrice)
+        array.push(levelLines, line.new(lineLeft, valPrice, lineRight, valPrice, color=i_valColor, style=f_getLineStyle(i_valStyle), width=1))
+    
+    if i_showPriceLabels
+        int priceLabelX = i_placement == "Right" ? lineRight : lineLeft
+        if i_showPOC and not na(pocPrice)
+            array.push(priceLabels, label.new(priceLabelX, pocPrice, str.tostring(pocPrice, format.mintick), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=i_pocColor, size=size.small))
+        if i_showVAH and not na(vahPrice)
+            array.push(priceLabels, label.new(priceLabelX, vahPrice, str.tostring(vahPrice, format.mintick), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=i_vahColor, size=size.small))
+        if i_showVAL and not na(valPrice)
+            array.push(priceLabels, label.new(priceLabelX, valPrice, str.tostring(valPrice, format.mintick), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=i_valColor, size=size.small))
+    
+    if i_showStats
+        statsTable := table.new(f_getTablePosition(i_tablePosition), 2, 7, bgcolor=color.new(color.black, 30), border_width=1, border_color=color.gray)
+        
+        table.cell(statsTable, 0, 0, "VRVP", text_color=color.white, text_size=f_getTableSize(i_tableSize), bgcolor=color.new(color.blue, 70), text_halign=text.align_right)
+        table.cell(statsTable, 1, 0, "v4", text_color=color.white, text_size=f_getTableSize(i_tableSize), bgcolor=color.new(color.blue, 70), text_halign=text.align_left)
+        
+        table.cell(statsTable, 0, 1, "Bars:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 1, str.tostring(visibleBarCount), text_color=color.white, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+        
+        table.cell(statsTable, 0, 2, "Volume:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 2, f_formatVolume(totalVolume), text_color=color.white, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+        
+        float upPct = totalVolume > 0 ? (totalUpVolume / totalVolume) * 100 : 0
+        float downPct = totalVolume > 0 ? (totalDownVolume / totalVolume) * 100 : 0
+        
+        table.cell(statsTable, 0, 3, "Up Vol:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 3, str.tostring(upPct, "#.#") + "%", text_color=i_upColor, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+        
+        table.cell(statsTable, 0, 4, "Down Vol:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 4, str.tostring(downPct, "#.#") + "%", text_color=i_downColor, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+        
+        float vsPoc = not na(pocPrice) and pocPrice != 0 ? ((close - pocPrice) / pocPrice) * 100 : 0
+        string vsPocStr = (vsPoc >= 0 ? "+" : "") + str.tostring(vsPoc, "#.##") + "%"
+        color vsPocColor = vsPoc >= 0 ? i_upColor : i_downColor
+        
+        table.cell(statsTable, 0, 5, "vs POC:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 5, vsPocStr, text_color=vsPocColor, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+        
+        table.cell(statsTable, 0, 6, "Method:", text_color=color.gray, text_size=f_getTableSize(i_tableSize), text_halign=text.align_left)
+        table.cell(statsTable, 1, 6, i_volDistribution == "Typical Price Weighted" ? "TPO" : i_volDistribution == "Close Weighted" ? "Close" : "Uniform", text_color=color.yellow, text_size=f_getTableSize(i_tableSize), text_halign=text.align_right)
+
